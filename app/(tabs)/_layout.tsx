@@ -1,14 +1,20 @@
 import { Redirect, Tabs } from "expo-router";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect } from "react";
 
 import { TabBarIcon } from "@/components/navigation/TabBarIcon";
 import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { View, ImageSourcePropType, StatusBar } from "react-native";
+import {
+  View,
+  ImageSourcePropType,
+  StatusBar,
+  BackHandler,
+} from "react-native";
 import { Image } from "expo-image";
 import { ConstantStorage, LocalUserInfo } from "@/constants/LocalStorage";
 import { useMMKVObject } from "react-native-mmkv";
 import { usePrivy } from "@privy-io/expo";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type TabIconParams = ImageSourcePropType | undefined;
 
@@ -36,6 +42,22 @@ export default function TabLayout() {
   // if (!localUser) {
   //   return <Redirect href="/login" />;
   // }
+  const insets = useSafeAreaInsets();
+
+  // useEffect(() => {
+  //   // 使用BackHandler监听 Android 设备上的物理返回按钮（即硬件返回按钮）的按下事件。
+  //   const backHandler = BackHandler.addEventListener(
+  //     "hardwareBackPress",
+  //     () => {
+  //       CLOG.info(`点击返回按钮`);
+
+  //       // 在此处添加你的逻辑来阻止安卓上的返回事件
+  //       return true; // 返回 true 表示已经处理了返回事件，不会继续传递
+  //     }
+  //   );
+
+  //   return () => backHandler.remove();
+  // }, []);
 
   return (
     // <PaperProvider theme={theme}>
@@ -60,16 +82,15 @@ export default function TabLayout() {
           elevation: 0,
           borderTopWidth: 0,
           borderTopColor: "rgb(255,0,0)",
-          // height: 90,
+          height: insets.bottom + 60,
         },
       }}
-      initialRouteName="shop"
+      initialRouteName="nft"
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
-
           tabBarIcon: ({ color, focused }) => (
             <Image
               style={{ height: 27, width: 27 }}
@@ -80,7 +101,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="ntf"
+        name="nft"
         options={{
           title: "NTF",
           tabBarIcon: ({ color, focused }) => (

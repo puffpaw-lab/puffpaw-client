@@ -25,10 +25,10 @@ const rightLightLinearLight = "rgb(20,20,20)";
 const rightLightLinearDark = "rgb(20,20,20)";
 
 export const bgColorList = [
-  { offset: "0%", color: "rgb(120,32,25)", opacity: "1" },
+  { offset: "0%", color: "rgb(130,37,30)", opacity: "0.8" },
   // { offset: "29%", color: "#44107A", opacity: "1" },
-  // { offset: "50%", color: "rgb(130,30,30)", opacity: "1" },
-  { offset: "100%", color: "rgb(10,5,5)", opacity: "1" },
+  // { offset: "50%", color: "rgb(80,30,25)", opacity: "1" },
+  { offset: "100%", color: "black", opacity: "1" },
 ];
 
 export const grayBGgColorList = [
@@ -40,6 +40,12 @@ export const grayBGgColorList = [
 
 export const buttonBgColor = "rgb(255,67,53)";
 export const buttonGrayBgColor = "rgb(17,17,17)";
+export const buttonGray25Color = "rgb(25,25,25)";
+export const buttonGray30Color = "rgb(30,30,30)";
+
+export const buttonGray50Color = "rgb(50,50,50)";
+export const buttonGray150Color = "rgb(150,150,150)";
+export const buttonGray200Color = "rgb(200,200,200)";
 
 export const Colors = {
   light: {

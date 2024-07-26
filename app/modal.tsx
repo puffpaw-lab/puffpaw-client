@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { PrivyLoginView } from "@/components/Custom/PrivyLoginView";
 import Toast from "react-native-toast-message";
+import { Squealt3Regular } from "@/constants/FontUtils";
 export default function Modal() {
   // If the page was reloaded or navigated to directly, then the modal should be presented as
   // a full screen page. You may need to change the UI to account for this.
@@ -31,7 +32,8 @@ export default function Modal() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            // fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
         }}
       />

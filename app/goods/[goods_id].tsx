@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView, Text, Pressable } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Text,
+  Pressable,
+  useWindowDimensions,
+  Modal,
+} from "react-native";
 import {
   Stack,
   useLocalSearchParams,
@@ -8,42 +16,63 @@ import {
 } from "expo-router";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { RightLogoView } from "@/components/Custom/RightLogoView";
+import {
+  HeaderLeftBackView,
+  RightLogoView,
+} from "@/components/Custom/RightLogoView";
 import { Button } from "@rneui/base";
-import { DialogUtils } from "@/constants/DialogUtils";
+import {
+  CustomDialog,
+  DialogUtils,
+  toastConfig,
+} from "@/constants/DialogUtils";
 import { goodsInfoInterface, PageSize } from "@/constants/HttpUtils";
 import { AxiosResponse } from "axios";
 import { GoodsItemPicType, GoodsItemType } from "@/constants/ViewProps";
-import { formatImageUrl } from "@/constants/CommonUtils";
-import { Image } from "expo-image";
+import {
+  formatBase64,
+  formatImageUrl,
+  formatMoney,
+  percent10WinHeight,
+  percent5WinHeight,
+  windowWidth,
+} from "@/constants/CommonUtils";
+import { Image, ImageBackground } from "expo-image";
 import { FloatCartView } from "@/components/Custom/FloatCartView";
-import { buttonBgColor, buttonGrayBgColor } from "@/constants/Colors";
+import {
+  buttonBgColor,
+  buttonGray30Color,
+  buttonGray50Color,
+  buttonGrayBgColor,
+} from "@/constants/Colors";
 import { Squealt3Regular } from "@/constants/FontUtils";
 import { LocalCartInfo, ConstantStorage } from "@/constants/LocalStorage";
 import { useMMKVObject } from "react-native-mmkv";
 import PagerView from "react-native-pager-view";
 import Index from "../../scripts/reset-project";
+import RenderHtml from "react-native-render-html";
+import { CLOG } from "@/constants/LogUtils";
+import Toast from "react-native-toast-message";
 
 export default function goodsItemScreen() {
-  // 购物车信息
-  const [localCartList, setLocalCartList] = useMMKVObject<LocalCartInfo[]>(
-    ConstantStorage.cartInfo
-  );
-
   const { goods_id, extra, other } = useLocalSearchParams<{
     goods_id: string;
     extra?: string;
     other?: string;
   }>();
+  const { width } = useWindowDimensions();
 
-  const pathname = usePathname();
+  // 购物车信息
+  const [localCartList, setLocalCartList] = useMMKVObject<LocalCartInfo[]>(
+    ConstantStorage.cartInfo
+  );
 
   const router = useRouter();
-  const [count, setCount] = useState(0);
-
-  const onAddToBasket = () => {};
 
   const [refreshing, setRefreshing] = React.useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [goodsImageVisible, setGoodsImageVisible] = React.useState(false);
+  const [goodsImageUrl, setGoodsImageUrl] = React.useState<string | null>("");
 
   const onRefresh = React.useCallback(() => {
     // setPageIndex(0);
@@ -54,6 +83,8 @@ export default function goodsItemScreen() {
   const [goodsPicList, setGoodsPicList] = useState<GoodsItemPicType[] | null>(
     null
   );
+
+  const [items, setItems] = useState<string[] | null>(null);
 
   // 商品信息成功
   const goodsInfoSuccess = (response: AxiosResponse<any, any> | null) => {
@@ -75,7 +106,7 @@ export default function goodsItemScreen() {
     // }
 
     // // 商品接口成功
-    // console.log(JSON.stringify(goodsPic));
+    // CLOG.info(JSON.stringify(goodsPic));
 
     setGoodsInfo(depinGoods);
     setGoodsPicList(goodsPic);
@@ -125,15 +156,38 @@ export default function goodsItemScreen() {
       setLocalCartList([item]);
     }
 
-    router.push({
-      pathname: "/goods/cart",
-      params: { goods_id: goods_id },
-    });
+    setTimeout(() => {
+      router.push({
+        pathname: "/goods/cart",
+        params: { goods_id: goods_id },
+      });
+    }, 500);
   };
+
+  // 图片列表
+  useEffect(() => {
+    if (goodsPicList !== undefined && goodsPicList !== null) {
+      let tempItems = goodsPicList.map((e) => "");
+      setItems(tempItems);
+    }
+
+    CLOG.info(goodsPicList);
+  }, [goodsPicList]);
 
   useEffect(() => {
     getGoodsInfo();
   }, []);
+
+  const setPage = (page: number) => {
+    setSelectedIndex(page);
+  };
+
+  const source = {
+    html: `
+  <p style='text-align:center;height:10'>
+  </p>`,
+  };
+  const MemoizedRenderHtml = React.memo(RenderHtml);
 
   return (
     <SafeAreaView
@@ -142,74 +196,142 @@ export default function goodsItemScreen() {
     >
       <Stack.Screen
         options={{
-          title: `Goods ${goods_id}`,
+          title: ``,
           headerShadowVisible: true,
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
           headerBackTitleVisible: false,
           headerRight: (props) => (
-            <RightLogoView marginRight={0}></RightLogoView>
+            <RightLogoView marginRight={-5}></RightLogoView>
+          ),
+          headerLeft: (props) => (
+            <HeaderLeftBackView
+              callback={() => {
+                if (router.canGoBack()) router.back();
+              }}
+            ></HeaderLeftBackView>
           ),
         }}
       />
-      <ScrollView style={{ backgroundColor: "black" }}>
-        <View style={styles.container}>
-          <View style={styles.topItem}>
-            {/* <View style={{ justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          style={{
+            flex: 1,
+            backgroundColor: "black",
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <View style={styles.container}>
+            <View style={styles.topItem}>
+              {/* <View style={{ justifyContent: "center", alignItems: "center" }}>
               <Image
                 source={formatImageUrl(goodsInfo?.pic ?? "")}
                 placeholder={require("@/assets/images/shop/goods_icon.png")}
                 style={styles.cardIconImage}
                 contentFit="contain"
+              
                 placeholderContentFit="contain"
               />
             </View> */}
+              {goodsPicList && (
+                <PagerView
+                  style={{
+                    // flex: 1,
+                    height: 250,
+                    width: "100%",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                  initialPage={0}
+                  // useNext={false}
+                  onPageSelected={(e) => {
+                    setPage(e.nativeEvent.position);
+                  }}
+                >
+                  {goodsPicList &&
+                    goodsPicList.map((e, index) => (
+                      <View
+                        key={`${index}${e.id}`}
+                        style={{
+                          // width: 300,
+                          // height: 200,
+                          // backgroundColor: buttonGrayBgColor,
+                          backgroundColor: "rgb(23,23,23)",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Image
+                          // key={`${index}`}
+                          source={formatImageUrl(e.url)}
+                          placeholder={require("@/assets/images/shop/shop_default_icon.png")}
+                          style={{
+                            width: windowWidth * 0.6,
+                            height: windowWidth * 0.6,
+                          }}
+                          contentFit="contain"
+                          placeholderContentFit="contain"
+                        />
+                      </View>
+                    ))}
+                </PagerView>
+              )}
+            </View>
 
-            {goodsPicList && (
-              <PagerView
+            <Pressable
+              // style={{ backgroundColor: "rgb(23,23,23)" }}
+              onPress={() => {
+                // if (goodsPicList && selectedIndex < goodsPicList.length) {
+                //   setGoodsImageUrl(goodsPicList[selectedIndex].url);
+                // }
+                // setGoodsImageVisible(true);
+              }}
+            >
+              <View
                 style={{
-                  // flex: 1,
-                  height: 200,
-                  width: "100%",
-                  backgroundColor: "green",
+                  position: "absolute",
+                  // width: 25,
+                  // height: 25,
+                  right: 20,
+                  bottom: 20,
+                  flexDirection: "row",
                   justifyContent: "center",
                   alignItems: "center",
+                  // backgroundColor: "green",
                 }}
-                initialPage={0}
-                useNext={false}
               >
-                {goodsPicList &&
-                  goodsPicList.map((e, index) => (
-                    <View
-                      key={`${index}`}
-                      style={{
-                        // width: 300,
-                        // height: 200,
-                        backgroundColor: buttonGrayBgColor,
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Image
-                        // key={`${index}`}
-                        source={formatImageUrl(e.url ?? "")}
-                        placeholder={require("@/assets/images/shop/goods_icon.png")}
-                        style={styles.cardIconImage}
-                        contentFit="contain"
-                        placeholderContentFit="contain"
-                      />
-                    </View>
-                  ))}
-              </PagerView>
-            )}
+                <Pressable
+                  onPress={() => {
+                    if (goodsPicList && selectedIndex < goodsPicList.length) {
+                      setGoodsImageUrl(goodsPicList[selectedIndex].url);
+                    }
 
-            {/* <View style={styles.topAbsItem}>
-              <Text
+                    setGoodsImageVisible(true);
+                  }}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    // backgroundColor: "red",
+                  }}
+                >
+                  <Image
+                    source={require("@/assets/images/shop/goods_item_arrow.png")}
+                    style={{ width: 16, height: 16 }}
+                    contentFit="contain"
+                  ></Image>
+                </Pressable>
+              </View>
+              {/* <Text
                 style={{
-                  color: "white",
+                  color: buttonGray50Color,
                   marginLeft: 20,
                   marginTop: 5,
                   height: 30,
@@ -217,79 +339,179 @@ export default function goodsItemScreen() {
               >
                 1.8% NICO{" "}
               </Text>
-              <Text style={{ color: "white", marginLeft: 20 }}>30 PUFF</Text>
-            </View> */}
-          </View>
+              <Text
+                style={{
+                  color: buttonGray50Color,
+                  marginLeft: 20,
+                  marginBottom: 20,
+                }}
+              >
+                30 PFF
+              </Text> */}
+            </Pressable>
 
-          <View style={{ backgroundColor: buttonGrayBgColor }}>
             <View
               style={{
-                position: "absolute",
-                // width: 25,
-                // height: 25,
-                right: 30,
-                bottom: 40,
-                // backgroundColor: "red",
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                marginTop: 10,
               }}
             >
-              <Image
-                source={require("@/assets/images/shop/goods_item_arrow.png")}
-                style={{ width: 16, height: 16 }}
-                contentFit="contain"
-              ></Image>
+              {items &&
+                items.map((e, index) => (
+                  <View
+                    key={index}
+                    style={{
+                      // backgroundColor: "red",
+                      // width: 6,
+                      // height: 6,
+                      // borderRadius: 3,
+                      padding: 5,
+                    }}
+                  >
+                    <View
+                      // key={e}
+                      style={{
+                        backgroundColor:
+                          index == selectedIndex
+                            ? buttonBgColor
+                            : buttonGray30Color,
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                      }}
+                    ></View>
+                  </View>
+                ))}
             </View>
-            <Text
-              style={{
-                color: "white",
-                marginLeft: 20,
-                marginTop: 5,
-                height: 30,
-              }}
-            >
-              1.8% NICO{" "}
-            </Text>
-            <Text style={{ color: "white", marginLeft: 20, marginBottom: 20 }}>
-              30 PUFF
-            </Text>
-          </View>
 
-          <View style={styles.detailItem}>
-            <Text
+            {/* 商品名称 */}
+            <View
               style={{
-                color: "white",
-                marginLeft: 20,
+                flexDirection: "row",
+                paddingHorizontal: 20,
                 marginTop: 15,
-                fontWeight: "bold",
               }}
             >
-              Detail
-            </Text>
-            <Text style={{ color: "gray", marginLeft: 20, marginTop: 10 }}>
-              Detail Info
-            </Text>
-            <Text
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+                  fontSize: 15,
+                  color: "white",
+                  textAlign: "left",
+                  flex: 3,
+                  // maxHeight: 50,
+                }}
+              >
+                {/* Green Grape Flavor*/}
+                {goodsInfo?.name}
+              </Text>
+            </View>
+            <View
               style={{
-                color: "white",
-                marginLeft: 20,
-                marginTop: 25,
-                fontWeight: "bold",
+                flexDirection: "row",
+                paddingHorizontal: 20,
+                marginTop: 15,
               }}
             >
-              Features
-            </Text>
-            <Text style={{ color: "gray", marginLeft: 20, marginTop: 10 }}>
-              {goodsInfo?.brief ?? ""}
-              {/* Just to add clarity for others, I'm using a bottom tab navigator
-                (from react-navigation-material-bottom-tabs) and two of my tabs
-                have their own stack navigators. Setting the headerStyle didn't
-                remove the shadow for me, but setting cardStyle did. Here's the
-                source of the whole file just so it's totally clear. The only
-                lines added were the two styles in cardStyle in the stack
-                function. */}
-            </Text>
+              {/* <View style={{ flex: 1 }}></View> */}
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+                  fontSize: 15,
+                  color: "white",
+                  flex: 2,
+                  textAlign: "right",
+                }}
+              >
+                {formatMoney(goodsInfo?.price)} PFF
+              </Text>
+            </View>
+
+            {/* 详情 */}
+            <View style={styles.detailItem}>
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+
+                  color: "white",
+                  marginLeft: 20,
+                  marginTop: 20,
+                  fontWeight: "bold",
+                }}
+              >
+                Details
+              </Text>
+              {/* <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+                  color: "gray",
+                  marginLeft: 20,
+                  marginTop: 10,
+                }}
+              >
+                {goodsInfo?.brief}
+              </Text> */}
+              <View style={{ marginHorizontal: 20 }}>
+                <MemoizedRenderHtml
+                  contentWidth={width - 40}
+                  source={{ html: `${formatBase64(goodsInfo?.brief)}` }}
+                  baseStyle={{ marginTop: 10 }}
+                />
+              </View>
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+
+                  color: "white",
+                  marginLeft: 20,
+                  marginTop: 25,
+                  fontWeight: "bold",
+                }}
+              >
+                Features
+              </Text>
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+
+                  color: "gray",
+                  marginLeft: 20,
+                  marginTop: 20,
+                  paddingHorizontal: 20,
+                }}
+              >
+                {/* {goodsInfo?.brief} */}
+                {/* Savor the sour-sweet flavors of fresh green grapes in this pod.
+                It's like a burst of summer in your mouth, where the grapes are
+                ripe and ready to be popped. Enjoy a fun and creative vaping
+                experience that'll leave you feeling refreshed and ready to
+                tackle the day! RELX Pod Pro, compatible with RELX Essential,
+                Infinity, Phantom, and Artisan, offers exceptional taste,
+                high-quality vape juice, and a smooth vaping experience with
+                Super Smooth™ technology and leak-resistant design. Our Pods Pro
+                collection boasts a diverse range of flavors, tested by over
+                10K+ consumers on 145 flavors, ensuring the perfect fit for
+                every vaper. From watermelon to tobacco, jasmine green tea to
+                double mint, find your perfect flavor! */}
+              </Text>
+              <View style={{ marginHorizontal: 30 }}>
+                <MemoizedRenderHtml
+                  contentWidth={width - 40}
+                  source={{
+                    html: `${formatBase64(goodsInfo?.feature)}`,
+                  }}
+                  baseStyle={{}}
+                />
+              </View>
+            </View>
+
+            <View style={{ height: percent10WinHeight }}></View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+        <FloatCartView right={20} bottom={20}></FloatCartView>
+      </View>
       <Pressable onPress={addCartEvent}>
         <View
           style={{
@@ -299,6 +521,7 @@ export default function goodsItemScreen() {
             alignItems: "center",
             marginHorizontal: 20,
             borderRadius: 25,
+            marginBottom: 10,
           }}
         >
           <View
@@ -316,16 +539,82 @@ export default function goodsItemScreen() {
                 fontSize: 14,
               }}
             >
-              Add to Basket
+              Add to Cart
             </Text>
           </View>
         </View>
       </Pressable>
 
-      <FloatCartView right={20} bottom={70}></FloatCartView>
+      {/* 商品照片页面 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={goodsImageVisible}
+        onRequestClose={() => {
+          setGoodsImageVisible(!goodsImageVisible);
+        }}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            // marginTop: 22,
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <Pressable
+            onPress={() => {
+              setGoodsImageVisible(false);
+            }}
+            style={{
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              height: "50%",
+            }}
+          >
+            <Image
+              // key={`${index}`}
+              source={formatImageUrl(goodsImageUrl)}
+              placeholder={require("@/assets/images/shop/shop_default_icon.png")}
+              style={{
+                width: windowWidth,
+                height: windowWidth,
+              }}
+              contentFit="contain"
+              placeholderContentFit="contain"
+            />
+          </Pressable>
+          {/* </View> */}
+          {/* </View> */}
+        </Pressable>
+        <CustomDialog />
+      </Modal>
     </SafeAreaView>
   );
 }
+
+// // 模拟商品数据
+// const mockGoodsDatas: GoodsItemType = {
+//   id: 1,
+//   createdAt: "2024-06-02T20:45:40.731Z",
+//   updatedAt: "2024-06-02T20:45:40.731Z",
+//   name: "Green Grape Flavor",
+//   goodsCateId: 1,
+//   price: "3000000000",
+//   pic: "",
+//   feature: "22",
+//   brief: "",
+//   status: 0,
+// };
+
+// const mockGoodsItemPic: GoodsItemPicType[] = [
+//   { goodsId: "1", type: "", name: "", url: "", content: "" },
+//   { goodsId: "1", type: "", name: "", url: "", content: "" },
+//   { goodsId: "1", type: "", name: "", url: "", content: "" },
+//   { goodsId: "1", type: "", name: "", url: "", content: "" },
+// ];
 
 const styles = StyleSheet.create({
   safeContainer: {
@@ -336,7 +625,7 @@ const styles = StyleSheet.create({
     // width: "100%",
   },
   container: {
-    // flex: 1,
+    flex: 1,
     // alignItems: "center",
     // justifyContent: "center",
     backgroundColor: "black",
@@ -349,8 +638,9 @@ const styles = StyleSheet.create({
     // height: "100%",
   },
   cardIconImage: {
-    width: 220,
-    height: 220,
+    width: windowWidth * 0.6,
+    height: windowWidth * 0.6,
+    backgroundColor: "red",
   },
   image: {
     width: 100,
@@ -363,7 +653,11 @@ const styles = StyleSheet.create({
     height: 45,
     bottom: 0,
   },
-  topItem: { width: "100%", backgroundColor: "rgb(23,23,23)" },
+  topItem: {
+    width: "100%",
+    backgroundColor: "rgb(23,23,23)",
+    paddingTop: percent5WinHeight,
+  },
   topAbsItem: {
     bottom: 20,
     left: 20,
@@ -375,9 +669,10 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   detailItem: {
-    height: 500,
-    width: "100%",
+    // height: 500,
+    // width: "100%",
     backgroundColor: "black",
+    marginTop: 10,
     marginBottom: 60,
   },
   itemTitleText: { fontSize: 20, fontWeight: "bold", color: "white" },

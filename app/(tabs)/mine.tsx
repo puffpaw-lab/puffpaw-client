@@ -1,5 +1,4 @@
 import {
-  Image,
   StyleSheet,
   View,
   Pressable,
@@ -13,10 +12,12 @@ import { Dimensions } from "react-native";
 import React, {
   JSXElementConstructor,
   ReactElement,
+  useCallback,
   useEffect,
   useState,
 } from "react";
 import { router, Stack, useRouter } from "expo-router";
+import { Image, ImageBackground } from "expo-image";
 
 import { FlashList, MasonryFlashList } from "@shopify/flash-list";
 import { useWindowDimensions } from "react-native";
@@ -29,7 +30,7 @@ import {
   TabBarItemProps,
 } from "react-native-tab-view";
 import { RightLogoView } from "@/components/Custom/RightLogoView";
-import { RefreshControl } from "react-native-gesture-handler";
+import { RefreshControl, TextInput } from "react-native-gesture-handler";
 
 import {
   BackgroundView,
@@ -38,7 +39,14 @@ import {
 
 // import { Searchbar } from "react-native-elements";
 import { Divider, SearchBar } from "@rneui/themed";
-import { buttonBgColor, buttonGrayBgColor } from "@/constants/Colors";
+import {
+  buttonBgColor,
+  buttonGray150Color,
+  buttonGray200Color,
+  buttonGray30Color,
+  buttonGray50Color,
+  buttonGrayBgColor,
+} from "@/constants/Colors";
 import { Squealt3Regular } from "@/constants/FontUtils";
 import { Button } from "@rneui/base";
 import { UserHeaderView } from "@/components/Custom/UserHeaderView";
@@ -55,36 +63,55 @@ import {
   OrdersListView,
 } from "@/components/Custom/OrderListView";
 
+import { Nft, useNFTList } from "@/constants/NodeUtil";
+import { CLOG } from "@/constants/LogUtils";
+import { buttonGray25Color } from "../../constants/Colors";
+import {
+  halfWinHeight,
+  windowHeight,
+  windowWidth,
+} from "@/constants/CommonUtils";
+
+// 搜索页面
 const FriendSearchbar = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
 
   return (
-    <View style={{ flex: 1, marginVertical: 10 }}>
-      <SearchBar
-        placeholder="Search"
-        // iconColor="white"
-        placeholderTextColor={"gray"}
-        // traileringIcon={() => {
-        //   return (
-        //     <Icon
-        //       size={20}
-        //       source={require("@/assets/images/mine/search.png")}
-        //     ></Icon>
-        //   );
-        // }}
-        containerStyle={{ backgroundColor: "black", borderRadius: 10 }}
-        // clearButtonMode="always"
-        // rightIcon={<Text>Cancel</Text>}
-        onChangeText={setSearchQuery}
-        value={searchQuery}
+    <View
+      style={{
+        // flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingTop: 10,
+        paddingBottom: 5,
+        paddingHorizontal: 20,
+        // backgroundColor: "red",
+      }}
+    >
+      <View
         style={{
           flex: 1,
-          marginHorizontal: 10,
-          backgroundColor: "rgb(50,50,50)",
-          color: "white",
-          borderRadius: 10,
+          borderRadius: 25,
+          height: 50,
+          width: "100%",
+          backgroundColor: "rgb(20,20,20)",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingHorizontal: 15,
+          borderColor: buttonGray50Color,
+          borderWidth: 1,
         }}
-      />
+      >
+        <TextInput
+          value="Search..."
+          style={{ color: "white", fontSize: 14 }}
+        ></TextInput>
+        <Image
+          source={require("@/assets/images/mine/search.png")}
+          style={{ width: 18, height: 18 }}
+        />
+      </View>
     </View>
   );
 };
@@ -113,96 +140,158 @@ const AddNFTView = (callback: NFTViewProps) => {
   );
 };
 
-const DATA = [
-  {
-    title: "First Item",
-  },
-  {
-    title: "Second Item",
-  },
-  {
-    title: "Third Item",
-  },
-  {
-    title: "5 Item",
-  },
-  {
-    title: "6 Item",
-  },
-  {
-    title: "7 Item",
-  },
-  {
-    title: "5 Item",
-  },
-  {
-    title: "6 Item",
-  },
-  {
-    title: "7 Item",
-  },
-];
-
 type NFTRefreshProps = ReactElement<
   RefreshControlProps,
   string | JSXElementConstructor<any>
 >;
 
-const MyNFTList = (callback: NFTViewProps) => {
+// 我的Node视图
+const MyNodeView = (callback: NFTViewProps) => {
+  const { getNFTList } = useNFTList();
+
+  // NFT数据列表
+  const [NFTDatas, setNFTDatas] = useState<Nft[]>([]);
+
   const [refreshing, setRefreshing] = React.useState(false);
+  const [pageIndex, setPageIndex] = useState(1);
 
   const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    setPageIndex(1);
+    getLocalNFTList(true);
+    CLOG.info(`nft列表下拉刷新`);
   }, []);
 
-  return (
-    <MasonryFlashList
-      // refreshControl
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={"white"}
-          progressBackgroundColor={"white"}
-          style={{ backgroundColor: "black" }}
-        />
-      }
-      numColumns={2}
-      data={DATA}
-      renderItem={({ item, index }) => {
-        // if (index == 1) {
-        //   return (
-        //     <AddNFTView
-        //       callbackEvent={() => {
-        //         if (callback.callbackEvent) callback.callbackEvent();
-        //       }}
-        //     ></AddNFTView>
-        //   );
-        // }
+  // 获取商品数据
+  const getLocalNFTList = async (isClean: boolean) => {
+    setRefreshing(true);
 
-        return (
-          <Pressable
-            onPress={() => {
-              // router.push({
-              //   pathname: "/goods/[goods_id]",
-              //   params: { goods_id: item.title },
-              // });
-            }}
-          >
-            <MyNTFView></MyNTFView>
-          </Pressable>
-        );
-      }}
-      estimatedItemSize={150}
-    />
+    try {
+      const response = await getNFTList(
+        "0x60139e5076a7d5121d597e3a3a1647d716cd7fd9",
+        pageIndex,
+        PageSize
+      );
+
+      if (isClean) {
+        setNFTDatas(response);
+      } else {
+        const items = [...NFTDatas, ...response];
+        setNFTDatas(items);
+      }
+    } catch (e) {
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const renderFooter = () => {
+    // 显示加载更多指示器
+    return refreshing ? <ActivityIndicator size="small" color="white" /> : null;
+  };
+
+  const handleEndReached = () => {
+    // 当滚动到底部时触发加载更多
+    if (!refreshing) {
+      setPageIndex((index) => index + 1);
+    }
+  };
+
+  const keyExtractor = useCallback(
+    (item: any, i: number) => `${i}-${item.id}`,
+    []
+  );
+
+  // 分页加载
+  useEffect(() => {
+    getLocalNFTList(pageIndex <= 1);
+  }, [pageIndex]);
+
+  // useEffect(() => {
+  //   // CLOG.info("查询nft");
+  //   // getNFTList("0x60139e5076a7d5121d597e3a3a1647d716cd7fd9", 1, 5);
+  // }, []);
+
+  // const onRefresh = React.useCallback(() => {
+  //   setRefreshing(true);
+  //   setTimeout(() => {
+  //     setRefreshing(false);
+  //   }, 2000);
+  // }, []);
+
+  const onSetAsBackgroundEvent = (url: string) => {
+    CLOG.info(`onSetAsBackgroundEvent ${url}`);
+  };
+
+  const onSetAsAvstarEvent = (url: string) => {
+    CLOG.info(`onSetAsAvstarEvent ${url}`);
+  };
+
+  return (
+    <View style={{ marginLeft: 20, marginRight: 10, height: "100%" }}>
+      <MasonryFlashList
+        // refreshControl
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={"white"}
+            progressBackgroundColor={"white"}
+            style={{ backgroundColor: "black" }}
+          />
+        }
+        ListEmptyComponent={MyNodeEmptyView}
+        numColumns={2}
+        // 获取NFT列表
+        // useNFTList()
+        // data={myNodeItems}
+        data={NFTDatas} // myNodeItems
+        renderItem={({ item, index }) => {
+          return (
+            <Pressable
+              onPress={() => {
+                // router.push({
+                //   pathname: "/goods/[goods_id]",
+                //   params: { goods_id: item.title },
+                // });
+              }}
+            >
+              <MyNTFView
+                myNodeInfo={item}
+                setAsBackground={onSetAsBackgroundEvent}
+                setAsAvstar={onSetAsAvstarEvent}
+              ></MyNTFView>
+            </Pressable>
+          );
+        }}
+        keyExtractor={keyExtractor} //{(item) => `${item.id}`}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.1} // 触发加载更多的阈值
+        estimatedItemSize={300}
+      />
+    </View>
   );
 };
 
-const MyNTFView = () => {
+type MyNodeTypeView = ViewProps & {
+  myNodeInfo: Nft | null;
+  setAsBackground: (url: string) => void;
+  setAsAvstar: (url: string) => void;
+};
+
+const MyNTFView = ({
+  myNodeInfo,
+  setAsBackground,
+  setAsAvstar,
+}: MyNodeTypeView) => {
   const [showOperate, setShowOperate] = React.useState(false);
+
+  const windowWidth = Dimensions.get("window").width;
+  const windowHeight = Dimensions.get("window").height;
+
+  const itemWidth = (windowWidth - 30) / 2;
+
+  // const itemHeight = (windowWidth - 40) * 0.9;
 
   const onCardOperateEvent = () => {
     setShowOperate(true);
@@ -213,82 +302,220 @@ const MyNTFView = () => {
       style={{
         flex: 1,
         // width: 80,
-        height: 200,
+        height: 180,
         // backgroundColor: "gray",
-        padding: 10,
+        padding: 5,
+        // paddingRight: 10,
+        borderRadius: 10,
+        borderColor: buttonGray50Color,
+        borderWidth: 1,
+        marginHorizontal: 5,
+        marginTop: 5,
       }}
     >
-      <HorizonBackgroundView
+      <View
         style={{
-          borderRadius: 15,
-          borderColor: "rgb(150,150,150)",
-          borderWidth: 3,
+          borderRadius: 10,
+          borderColor: buttonGray50Color,
+          borderWidth: 1,
           alignContent: "center",
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <Image
+        <ImageBackground
           style={{ width: "100%", height: "100%" }}
-          source={require("@/assets/images/mine/default_ntf_01.png")}
-        ></Image>
-      </HorizonBackgroundView>
-      <View
-        style={{
-          position: "absolute",
-          right: 20,
-          bottom: 30,
-          width: 25,
-          height: 25,
-        }}
-      >
-        <Pressable onPress={onCardOperateEvent}>
-          <Image
-            style={{ width: "100%", height: "100%" }}
-            source={require("@/assets/images/mine/ntf_operate.png")}
-          ></Image>
-        </Pressable>
+          contentFit="fill"
+          source={myNodeInfo?.imageUrl}
+          placeholder={require("@/assets/images/mine/node/node_01.png")}
+          placeholderContentFit="fill"
+        >
+          {showOperate && (
+            <View
+              style={{
+                position: "absolute",
+                right: 0,
+                top: 0,
+                left: 0,
+                bottom: 0,
+                backgroundColor: buttonGray25Color,
+                borderRadius: 10,
+                alignContent: "center",
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 0,
+                paddingVertical: 5,
+                // width: "80%",
+              }}
+            >
+              <Pressable
+                onPress={() => {
+                  setAsBackground(myNodeInfo?.imageUrl ?? "");
+                }}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "rgb(37,37,37)",
+                  borderRadius: 15,
+                  height: 30,
+                  marginHorizontal: 10,
+                  marginTop: 20,
+                }}
+              >
+                <Text
+                  style={{
+                    flex: 1,
+                    color: "rgb(200,200,200)",
+                    fontSize: 12,
+                    textAlign: "center",
+                  }}
+                >
+                  Set as background
+                </Text>
+              </Pressable>
+              {/* <Divider
+                style={{ height: 1, width: "100%" }}
+                color={buttonGray30Color}
+              ></Divider> */}
+              <Pressable
+                onPress={() => {
+                  setAsAvstar(myNodeInfo?.imageUrl ?? "");
+                }}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  backgroundColor: "rgb(37,37,37)",
+                  alignItems: "center",
+
+                  borderRadius: 15,
+                  height: 30,
+                  marginHorizontal: 10,
+                  marginTop: 15,
+                }}
+              >
+                <Text
+                  style={{
+                    flex: 1,
+                    color: "rgb(200,200,200)",
+                    fontSize: 12,
+                    textAlign: "center",
+
+                    // backgroundColor: "green",
+                  }}
+                >
+                  Set as avatar
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setShowOperate(false)}
+                style={{
+                  width: "100%",
+                  height: 40,
+                  marginTop: 10,
+                  paddingRight: 10,
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                }}
+              >
+                <Image
+                  style={{ width: 20, height: 20 }}
+                  source={require("@/assets/images/mine/node/node_close.png")}
+                  contentFit="contain"
+                ></Image>
+              </Pressable>
+            </View>
+          )}
+        </ImageBackground>
       </View>
-      {showOperate && (
+      {!showOperate && (
         <View
           style={{
             position: "absolute",
-            right: 15,
+            right: 20,
             bottom: 20,
-            backgroundColor: "black",
-            borderRadius: 10,
-            alignContent: "center",
-            alignItems: "center",
-            justifyContent: "center",
-            paddingHorizontal: 10,
+            width: 20,
+            height: 20,
+          }}
+        >
+          <Pressable onPress={onCardOperateEvent}>
+            <Image
+              style={{ width: "100%", height: "100%" }}
+              source={require("@/assets/images/mine/node/node_more.png")}
+              contentFit="contain"
+            ></Image>
+          </Pressable>
+        </View>
+      )}
+      {!showOperate && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 20,
+            left: 15,
+            // width: 25,
+            height: 15,
           }}
         >
           <Text
             style={{
-              flex: 1,
-              color: "gray",
-              fontSize: 13,
-              height: 30,
-              marginTop: 10,
-              // backgroundColor: "red",
+              fontFamily: Squealt3Regular,
+              color: "white",
+              fontSize: 14,
+              fontWeight: "bold",
             }}
           >
-            Set as background
-          </Text>
-          <Divider style={{}}></Divider>
-          <Text
-            style={{
-              flex: 1,
-              color: "gray",
-              fontSize: 13,
-              height: 30,
-              // backgroundColor: "green",
-            }}
-          >
-            Set as avatar
+            #{myNodeInfo?.tokenId}
           </Text>
         </View>
       )}
+    </View>
+  );
+};
+
+// 空Node占位
+const MyNodeEmptyView = () => {
+  return (
+    <View
+      style={{
+        width: "100%",
+        height: windowHeight * 0.7,
+        flex: 1,
+        // backgroundColor: "green",
+        justifyContent: "flex-start",
+      }}
+    >
+      <View
+        style={{
+          margin: 20,
+          // backgroundColor: "green",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Image
+          style={{ width: windowWidth * 0.7, height: windowWidth * 0.6 }}
+          source={require("@/assets/images/mine/node/node_empty.png")}
+          contentFit="contain"
+        ></Image>
+      </View>
+      <View style={{ justifyContent: "center", flexDirection: "row" }}>
+        <Text
+          style={{
+            fontFamily: Squealt3Regular,
+            fontSize: 14,
+            color: buttonGray150Color,
+            // marginLeft: 20,
+            // marginTop: 35,
+            fontWeight: "bold",
+            // marginTop: 5,
+          }}
+        >
+          There is nothing!
+        </Text>
+      </View>
     </View>
   );
 };
@@ -315,7 +542,8 @@ const MyFriendList = (callback: NFTViewProps) => {
           style={{ backgroundColor: "black" }}
         />
       }
-      data={DATA}
+      ListEmptyComponent={MyFrientEmptyView}
+      data={mockFriendItems}
       renderItem={({ item, index }) => {
         return (
           <Pressable
@@ -326,7 +554,7 @@ const MyFriendList = (callback: NFTViewProps) => {
               // });
             }}
           >
-            <FriendView></FriendView>
+            <FriendView name={item.name} icon={item.icon}></FriendView>
           </Pressable>
         );
       }}
@@ -335,16 +563,98 @@ const MyFriendList = (callback: NFTViewProps) => {
   );
 };
 
-const FriendView = () => (
-  <>
+// 空Node占位
+const MyFrientEmptyView = () => {
+  return (
     <View
       style={{
+        width: "100%",
+        height: windowHeight * 0.7,
+        flex: 1,
+        // backgroundColor: "green",
+        justifyContent: "flex-start",
+      }}
+    >
+      <View
+        style={{
+          margin: 20,
+          // backgroundColor: "green",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Image
+          style={{ width: windowWidth * 0.6, height: windowWidth * 0.6 }}
+          source={require("@/assets/images/mine/friends/friend_empty.png")}
+          contentFit="contain"
+        ></Image>
+      </View>
+      <View style={{ justifyContent: "center", flexDirection: "row" }}>
+        <Text
+          style={{
+            fontFamily: Squealt3Regular,
+            fontSize: 14,
+            color: buttonGray150Color,
+            // marginLeft: 20,
+            // marginTop: 35,
+            fontWeight: "bold",
+            // marginTop: 5,
+          }}
+        >
+          There is nothing!
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+type FriendViewType = {
+  name: string;
+  icon: any;
+};
+
+const mockFriendItems: FriendViewType[] = [
+  {
+    name: "Abby05547",
+    icon: require("@/assets/images/mine/friends/friend_01.png"),
+  },
+  {
+    name: "Aveeeee",
+    icon: require("@/assets/images/mine/friends/friend_02.png"),
+  },
+  {
+    name: "BestNFT",
+    icon: require("@/assets/images/mine/friends/friend_03.png"),
+  },
+  {
+    name: "Cargocargo",
+    icon: require("@/assets/images/mine/friends/friend_01.png"),
+  },
+  {
+    name: "Abby05547",
+    icon: require("@/assets/images/mine/friends/friend_02.png"),
+  },
+];
+
+const FriendView = ({ name, icon }: FriendViewType) => (
+  <>
+    <Pressable
+      onPress={() => {
+        router.push({
+          pathname: "/friend/[friend_id]",
+          params: { friend_id: "1" },
+        });
+      }}
+      style={{
         // height: 100,
-        backgroundColor: "rgb(30,30,30)",
-        borderColor: "rgb(50,50,50)",
+        backgroundColor: buttonGrayBgColor,
+        borderColor: buttonGray30Color,
         borderWidth: 1,
         borderRadius: 30,
-        margin: 10,
+        marginHorizontal: 20,
+        marginVertical: 5,
+        paddingHorizontal: 20,
       }}
     >
       <View
@@ -358,29 +668,38 @@ const FriendView = () => (
           style={{
             width: 40,
             height: 40,
-            backgroundColor: "green",
+            // backgroundColor: "green",
             borderRadius: 20,
-            marginLeft: 20,
+            // marginLeft: 20,
           }}
         >
-          <Image
-            source={require("@/assets/images/mine/default_icon.png")}
-            style={{ width: "100%", height: "100%" }}
-          />
+          <Image source={icon} style={{ width: "100%", height: "100%" }} />
         </View>
-        <Text style={{ flex: 1, marginLeft: 15, color: "white" }}>
-          My Friend 00001
-        </Text>
+        <Text style={{ flex: 1, marginLeft: 15, color: "white" }}>{name}</Text>
         <Image
-          source={require("@/assets/images/mine/telegram.png")}
-          style={{ width: 25, height: 25, marginRight: 15 }}
+          source={require("@/assets/images/login/login_x.png")}
+          style={{
+            width: 20,
+            height: 20,
+            marginRight: 10,
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: buttonGray50Color,
+          }}
         ></Image>
         <Image
-          source={require("@/assets/images/mine/tuite.png")}
-          style={{ width: 25, height: 25, marginRight: 25 }}
+          source={require("@/assets/images/login/login_telegram.png")}
+          style={{
+            width: 20,
+            height: 20,
+            // marginRight: 25,
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: buttonGray50Color,
+          }}
         ></Image>
       </View>
-    </View>
+    </Pressable>
   </>
 );
 
@@ -402,13 +721,13 @@ export default function mineScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
           headerRight: (props) => (
             <Pressable
               onPress={() => {
                 // router.push("/setting");
-                router.push("/order");
+                // router.push("/order");
               }}
             >
               <RightLogoView></RightLogoView>
@@ -431,6 +750,7 @@ export default function mineScreen() {
 
       <BackgroundView x={"100%"} y={"100%"} rx={"70%"} ry={"30%"}>
         <UserHeaderView></UserHeaderView>
+        <View style={{ height: 10 }}></View>
         <MineTabView></MineTabView>
       </BackgroundView>
     </View>
@@ -439,7 +759,7 @@ export default function mineScreen() {
 }
 
 const renderScene = SceneMap({
-  All: MyNFTList,
+  All: MyNodeView,
   Processing: MyFriendList,
   Shiped: OrdersListAllView,
 });
@@ -472,7 +792,7 @@ const renderTabBar = (
     let index = 0;
     let title = "";
     if (itemProps.key == "All") {
-      title = "NFT";
+      title = "Node";
       index = 0;
     } else if (itemProps.key == "Processing") {
       title = "Friends";
@@ -501,7 +821,7 @@ const renderTabBar = (
             width: itemWidth,
             marginHorizontal: 5,
             backgroundColor: isSelected ? buttonBgColor : buttonGrayBgColor,
-            borderWidth: isSelected ? 0 : 1,
+            borderWidth: isSelected ? 0 : 0,
             borderColor: isSelected ? buttonBgColor : buttonBgColor,
             justifyContent: "center",
             alignItems: "center",
@@ -587,6 +907,45 @@ function MineTabView() {
     />
   );
 }
+
+// type MyNodeInfo = ViewProps & {
+//   type: string | null;
+//   icon: any | null;
+//   idNumber: string | null;
+// };
+
+// const myNodeItems: MyNodeInfo[] = [
+//   {
+//     type: "Google",
+//     icon: require("@/assets/images/mine/node/node_01.png"),
+//     idNumber: "0719",
+//   },
+//   {
+//     type: "X",
+//     icon: require("@/assets/images/mine/node/node_02.png"),
+//     idNumber: "5481",
+//   },
+//   {
+//     type: "Farcaster",
+//     icon: require("@/assets/images/mine/node/node_03.png"),
+//     idNumber: "7652",
+//   },
+//   {
+//     type: "Telegram",
+//     icon: require("@/assets/images/mine/node/node_04.png"),
+//     idNumber: "7653",
+//   },
+//   {
+//     type: "Continue with wallet",
+//     icon: require("@/assets/images/mine/node/node_05.png"),
+//     idNumber: "7658",
+//   },
+//   {
+//     type: "X",
+//     icon: require("@/assets/images/mine/node/node_06.png"),
+//     idNumber: "7658",
+//   },
+// ];
 
 const styles = StyleSheet.create({
   container: {

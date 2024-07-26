@@ -6,12 +6,16 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
+  useWindowDimensions,
+  Dimensions,
+  ViewProps,
+  Modal,
 } from "react-native";
 
-import React, { useEffect, useState } from "react";
-import { Stack } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { Stack, useFocusEffect } from "expo-router";
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, ListRenderItem } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import {
@@ -19,22 +23,37 @@ import {
   HorizonBackgroundView,
 } from "@/components/Custom/BackgroundView";
 import { RightLogoView } from "@/components/Custom/RightLogoView";
-import { DialogUtils } from "@/constants/DialogUtils";
+import {
+  CustomDialog,
+  DialogUtils,
+  toastConfig,
+} from "@/constants/DialogUtils";
 import { goodsListInterface, PageSize } from "@/constants/HttpUtils";
 import { ListEmptyView } from "@/components/Custom/ListEmptyView";
 import { Squealt3Regular } from "@/constants/FontUtils";
-import { formatImageUrl } from "@/constants/CommonUtils";
+import {
+  formatImageUrl,
+  formatMoney,
+  windowWidth,
+} from "@/constants/CommonUtils";
 import { AxiosResponse } from "axios";
 import { GoodsItemType } from "@/constants/ViewProps";
 import { FloatCartView } from "@/components/Custom/FloatCartView";
+import { buttonGray200Color, buttonGray50Color } from "@/constants/Colors";
+import PagerView from "react-native-pager-view";
+import { CLOG } from "@/constants/LogUtils";
+import Toast from "react-native-toast-message";
 
 const GoodsListView = () => {
   const [refreshing, setRefreshing] = React.useState(false);
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(1);
+  const [goodsImageVisible, setGoodsImageVisible] = React.useState(false);
+  const [goodsImageUrl, setGoodsImageUrl] = React.useState<string | null>("");
 
   const onRefresh = React.useCallback(() => {
-    setPageIndex(0);
+    setPageIndex(1);
     getGoodsList(true);
+    CLOG.info(`商品列表下拉刷新`);
   }, []);
 
   const [goodsItems, setGoodsItems] = useState<GoodsItemType[]>([]);
@@ -62,7 +81,7 @@ const GoodsListView = () => {
     }
 
     // 商品接口成功
-    // console.log(JSON.stringify(data));
+    // CLOG.info(JSON.stringify(data));
 
     if (isClean) {
       const items = [...list];
@@ -95,55 +114,132 @@ const GoodsListView = () => {
     // 当滚动到底部时触发加载更多
     if (!refreshing) {
       setPageIndex((index) => index + 1);
-      getGoodsList(false);
     }
   };
+
+  const keyExtractor = useCallback(
+    (item: any, i: number) => `${i}-${item.id}`,
+    []
+  );
+
+  // 展示商品照片
+  const onSelectedArrowEvent = (item: GoodsItemType) => {
+    CLOG.info("click " + item);
+    setGoodsImageUrl(item.pic);
+    setGoodsImageVisible(true);
+  };
+
+  // 分页加载
+  useEffect(() => {
+    getGoodsList(pageIndex <= 1);
+  }, [pageIndex]);
 
   useEffect(() => {
     // getGoodsList(false);
   }, []);
 
   return (
-    <FlashList
-      ListEmptyComponent={ListEmptyView}
-      ListHeaderComponent={GoodsHeaderView}
-      data={goodsItems}
-      renderItem={GoodsItemView}
-      // keyExtractor={(item) => `${item.id}`}
-      ListFooterComponent={renderFooter}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.1} // 触发加载更多的阈值
-      estimatedItemSize={300}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={"white"}
-          progressBackgroundColor={"white"}
-          style={{ backgroundColor: "black" }}
-        />
-      }
-    />
+    <View style={{ flex: 1 }}>
+      <FlashList
+        ListEmptyComponent={ListEmptyView}
+        ListHeaderComponent={GoodsHeaderView}
+        data={goodsItems}
+        // data={mockGoodsDatas}
+        renderItem={(item) => (
+          <GoodsItemView
+            item={item.item}
+            arrowCallback={onSelectedArrowEvent}
+          ></GoodsItemView>
+        )}
+        keyExtractor={keyExtractor} //{(item) => `${item.id}`}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.1} // 触发加载更多的阈值
+        estimatedItemSize={300}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={"white"}
+            progressBackgroundColor={"white"}
+            style={{ backgroundColor: "black" }}
+          />
+        }
+      />
+      {/* 商品照片页面 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={goodsImageVisible}
+        onRequestClose={() => {
+          setGoodsImageVisible(!goodsImageVisible);
+        }}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            // marginTop: 22,
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <Pressable
+            onPress={() => {
+              setGoodsImageVisible(false);
+            }}
+            style={{
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              height: "50%",
+            }}
+          >
+            <Image
+              // key={`${index}`}
+              source={formatImageUrl(goodsImageUrl)}
+              placeholder={require("@/assets/images/shop/shop_default_icon.png")}
+              style={{
+                width: windowWidth,
+                height: windowWidth,
+              }}
+              contentFit="contain"
+              placeholderContentFit="contain"
+            />
+          </Pressable>
+          {/* </View> */}
+          {/* </View> */}
+        </Pressable>
+        <CustomDialog />
+      </Modal>
+    </View>
   );
 };
 
-const GoodsItemView = ({ item }: { item: GoodsItemType }) => {
+type GoodsItemPropType = ViewProps & {
+  item: GoodsItemType;
+  arrowCallback: (item: GoodsItemType) => void;
+};
+
+const GoodsItemView = ({ item, arrowCallback }: GoodsItemPropType) => {
+  const windowWidth = Dimensions.get("window").width;
+  const windowHeight = Dimensions.get("window").height;
+
+  const itemHeight = (windowWidth - 40) * 1.05;
+
   return (
     <Pressable
       onPress={() => {
-        // router.push({
-        //   pathname: "/goods/[goods_id]",
-        //   params: { goods_id: item.id },
-        // });
         router.push({
-          pathname: "/goods/cart",
+          pathname: "/goods/[goods_id]",
+          params: { goods_id: item.id },
         });
       }}
     >
       <View
         style={{
           // width: "90%",
-          height: 300,
+          height: itemHeight,
           backgroundColor: "rgb(20,20,20)",
           // top: 10,
           // marginBottom: 20,
@@ -153,31 +249,34 @@ const GoodsItemView = ({ item }: { item: GoodsItemType }) => {
           borderRadius: 25,
         }}
       >
-        <View
+        {/* <View
           style={{
             position: "absolute",
-            left: 20,
+            left: 25,
             alignContent: "flex-start",
             alignItems: "flex-start",
             top: 20,
           }}
         >
-          <Text style={{ color: "gray" }}>1.8% NICO</Text>
-          <Text style={{ color: "gray" }}>30 PUFF</Text>
-        </View>
+          <Text style={{ color: buttonGray50Color }}>1.8% NICO</Text>
+          <Text style={{ color: buttonGray50Color }}>
+            {formatMoney("30")} PFF
+          </Text>
+        </View> */}
         <View
           style={{
-            // flex: 1,
+            flex: 1,
             alignItems: "center",
             justifyContent: "center",
             // position: "absolute",
             // left: 60,
-            top: 30,
+            // top: 30,
+            // backgroundColor: "yellow",
           }}
         >
           <Image
             source={formatImageUrl(item.pic)}
-            placeholder={require("@/assets/images/shop/goods_icon.png")}
+            placeholder={require("@/assets/images/shop/shop_default_icon.png")}
             style={styles.cardIconImage}
             contentFit="contain"
             placeholderContentFit="contain"
@@ -192,7 +291,7 @@ const GoodsItemView = ({ item }: { item: GoodsItemType }) => {
             // backgroundColor: "rgb(86,28,29)",
             flex: 1,
             width: "100%",
-            height: 60,
+            height: 70,
             // bottom: -20,
             // top: 240,
             // right: 0,
@@ -200,6 +299,7 @@ const GoodsItemView = ({ item }: { item: GoodsItemType }) => {
             bottom: 0,
             borderBottomLeftRadius: 25,
             borderBottomRightRadius: 25,
+            paddingLeft: 30,
           }}
         >
           <Text
@@ -207,21 +307,26 @@ const GoodsItemView = ({ item }: { item: GoodsItemType }) => {
               fontFamily: Squealt3Regular,
               fontSize: 16,
               color: "white",
-              marginLeft: 20,
-              marginTop: 5,
+              // marginLeft: 30,
+              marginTop: 10,
+              // backgroundColor: "red",
+              width: "90%",
+              height: 18,
             }}
+            ellipsizeMode={"tail"}
+            numberOfLines={2}
           >
-            {item.name} - {item.brief}
+            {item.name}
           </Text>
           <Text
             style={{
               fontFamily: Squealt3Regular,
-              fontSize: 14,
+              fontSize: 12,
               color: "white",
-              marginLeft: 20,
+              // marginLeft: 30,
             }}
           >
-            {item.price} Worth
+            {formatMoney(item.price)} PFF
           </Text>
           {/* </View> */}
         </HorizonBackgroundView>
@@ -230,16 +335,33 @@ const GoodsItemView = ({ item }: { item: GoodsItemType }) => {
             position: "absolute",
             // width: 25,
             // height: 25,
-            right: 30,
-            bottom: 80,
-            // backgroundColor: "red",
+            right: 25,
+            bottom: 90,
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            // backgroundColor: "green",
           }}
         >
-          <Image
-            source={require("@/assets/images/shop/goods_item_arrow.png")}
-            style={styles.goodsItemArrow}
-            contentFit="contain"
-          ></Image>
+          <Pressable
+            onPress={() => {
+              if (arrowCallback) arrowCallback(item);
+            }}
+            style={{
+              width: 40,
+              height: 40,
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              // backgroundColor: "red",
+            }}
+          >
+            <Image
+              source={require("@/assets/images/shop/goods_item_arrow.png")}
+              style={{ width: 16, height: 16 }}
+              contentFit="contain"
+            ></Image>
+          </Pressable>
         </View>
       </View>
     </Pressable>
@@ -252,11 +374,9 @@ const GoodsHeaderView = () => {
       <Text
         style={{
           fontFamily: Squealt3Regular,
-          fontSize: 30,
-
+          fontSize: 22,
           color: "white",
           marginLeft: 20,
-          fontWeight: "bold",
           marginTop: 5,
         }}
       >
@@ -265,10 +385,9 @@ const GoodsHeaderView = () => {
       <Text
         style={{
           fontFamily: Squealt3Regular,
-          fontSize: 20,
+          fontSize: 22,
           color: "white",
           marginLeft: 20,
-          fontWeight: "bold",
         }}
       >
         Pods
@@ -289,7 +408,7 @@ export default function shopScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            // fontWeight: "bold",
           },
           headerRight: (props) => <RightLogoView></RightLogoView>,
         }}
@@ -297,11 +416,62 @@ export default function shopScreen() {
 
       <BackgroundView x={"100%"} y={"100%"} rx={"70%"} ry={"30%"}>
         <GoodsListView></GoodsListView>
-        <FloatCartView right={20} bottom={40}></FloatCartView>
+        <FloatCartView right={16} bottom={20}></FloatCartView>
       </BackgroundView>
     </View>
   );
 }
+
+const mockGoodsDatas = [
+  {
+    id: 1,
+    createdAt: "2024-06-02T20:45:40.731Z",
+    updatedAt: "2024-06-02T20:45:40.731Z",
+    name: "Green Grape Flavor",
+    goodsCateId: 1,
+    price: "3000,000,000",
+    pic: "",
+    feature: "22",
+    brief: "",
+    status: 0,
+  },
+  {
+    id: 2,
+    createdAt: "2024-06-02T20:45:40Z",
+    updatedAt: "2024-06-02T20:45:40Z",
+    name: "Green Grape Flavor",
+    goodsCateId: 1,
+    price: "3000000000",
+    pic: "/uploads/file/5ae0c1c8a5260bc7b6648f6fbd115c35_20240608085121.jpg",
+    feature: "111111",
+    brief: "",
+    status: 1,
+  },
+  {
+    id: 3,
+    createdAt: "2024-06-02T20:45:40Z",
+    updatedAt: "2024-06-02T20:45:40Z",
+    name: "Green Grape Flavor",
+    goodsCateId: 1,
+    price: "3000000000",
+    pic: "/uploads/file/5ae0c1c8a5260bc7b6648f6fbd115c35_20240608085121.jpg",
+    feature: "222222",
+    brief: "",
+    status: 1,
+  },
+  {
+    id: 4,
+    createdAt: "2024-06-02T20:45:40Z",
+    updatedAt: "2024-06-02T20:45:40Z",
+    name: "Green Grape Flavor",
+    goodsCateId: 1,
+    price: "3000000000",
+    pic: "/uploads/file/5ae0c1c8a5260bc7b6648f6fbd115c35_20240608085121.jpg",
+    feature: "333333",
+    brief: "",
+    status: 1,
+  },
+];
 
 const styles = StyleSheet.create({
   container: {
@@ -338,9 +508,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   cardIconImage: {
-    width: 180,
-    height: 180,
-    marginTop: 10,
+    width: "65%",
+    height: "65%",
+    // marginTop: 10,
+    marginBottom: "15%",
+    marginRight: 20,
+    // backgroundColor: "red",
   },
   topItem: {
     position: "absolute",
@@ -356,9 +529,9 @@ const styles = StyleSheet.create({
     // backgroundColor: "rgb(86,28,29)",
     flex: 1,
     width: "100%",
-    height: 60,
+    height: 80,
     // bottom: -20,
-    top: 240,
+    top: "80%",
     right: 0,
     left: 0,
     borderBottomLeftRadius: 25,
@@ -385,10 +558,10 @@ const styles = StyleSheet.create({
     // right: 0,
   },
   headerContainer: {
-    flex: 1,
+    // flex: 1,
     alignItems: "flex-start",
     justifyContent: "space-evenly",
     backgroundColor: "black",
-    height: 120,
+    // height: 120,
   },
 });

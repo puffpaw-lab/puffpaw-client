@@ -29,6 +29,7 @@ import {
 import { EmailLoginView, SmsLoginView } from "./EmailLoginView";
 import Toast from "react-native-root-toast";
 import { DialogUtils } from "@/constants/DialogUtils";
+import { CLOG } from "@/constants/LogUtils";
 
 export const PrivyLoginView = ({
   style,
@@ -38,11 +39,11 @@ export const PrivyLoginView = ({
 }: PrivyLoginProps) => {
   const { login, state } = useLoginWithOAuth({
     onError(error) {
-      console.log("onError " + error.message);
+      CLOG.info("onError " + error.message);
       DialogUtils.showError("Login Error " + error.message);
     },
     onSuccess(user, isNewUser) {
-      console.log("onSuccess " + JSON.stringify(user));
+      CLOG.info("onSuccess " + JSON.stringify(user));
       DialogUtils.showSuccess("Login success");
     },
   });
@@ -92,7 +93,7 @@ export const PrivyLoginView = ({
         callbackEvent={() => {
           setLoginType("social");
           login({ provider: "google" });
-          console.log("google");
+          CLOG.info("google");
         }}
       ></CardItemView>
       <CardItemView
@@ -342,13 +343,13 @@ const styles = StyleSheet.create({
 //   const onWebMessageListener = (event: { nativeEvent: { data: any } }) => {
 //     // data 为字符串
 //     const { data } = event.nativeEvent;
-//     console.log(data);
+//     CLOG.info(data);
 //     if (data == null) {
 //       return;
 //     }
 
 //     const { method } = JSON.parse(data);
-//     console.log(`方法名称 ${method}`);
+//     CLOG.info(`方法名称 ${method}`);
 
 //     if (method == "login") {
 //       setIsLogin(true);

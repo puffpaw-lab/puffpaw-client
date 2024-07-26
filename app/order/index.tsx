@@ -25,6 +25,7 @@ import {
   OrdersListDeliveredView,
   OrdersListDoneView,
 } from "@/components/Custom/OrderListView";
+import { Squealt3Regular } from "@/constants/FontUtils";
 
 function OrdersListAllScreen() {
   return (
@@ -36,8 +37,9 @@ function OrdersListAllScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
         }}
@@ -66,8 +68,9 @@ function OrdersListProcessingScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
         }}
@@ -96,8 +99,10 @@ function OrdersListShipedScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
+
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
         }}
@@ -126,8 +131,10 @@ function OrdersListDeliveredScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
+
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
         }}
@@ -156,8 +163,10 @@ function OrdersListDoneScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
+
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
         }}

@@ -3,6 +3,7 @@ import { Button, Image, View, StyleSheet } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Stack } from "expo-router";
 import React from "react";
+import { CLOG } from "@/constants/LogUtils";
 
 export default function ImagePickerExample() {
   const [image, setImage] = useState("null");
@@ -16,7 +17,7 @@ export default function ImagePickerExample() {
       quality: 1,
     });
 
-    console.log(result);
+    CLOG.info(result);
 
     if (!result.canceled) {
       const { assets } = result;
@@ -35,7 +36,7 @@ export default function ImagePickerExample() {
           headerStyle: { backgroundColor: "#f4111e" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            // fontWeight: "bold",
           },
 
           // headerTitle: props => <LogoTitle {...props} />,

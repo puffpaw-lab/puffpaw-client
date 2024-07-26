@@ -1,5 +1,4 @@
 import {
-  Image,
   StyleSheet,
   View,
   Pressable,
@@ -13,10 +12,11 @@ import { Dimensions } from "react-native";
 import React, {
   JSXElementConstructor,
   ReactElement,
+  useCallback,
   useEffect,
   useState,
 } from "react";
-import { router, Stack, useRouter } from "expo-router";
+import { router, Stack, useFocusEffect, useRouter } from "expo-router";
 
 import { FlashList, MasonryFlashList } from "@shopify/flash-list";
 import { useWindowDimensions } from "react-native";
@@ -31,6 +31,7 @@ import {
 import { RightLogoView } from "@/components/Custom/RightLogoView";
 import { RefreshControl } from "react-native-gesture-handler";
 
+import { Image, ImageBackground } from "expo-image";
 import {
   BackgroundView,
   HorizonBackgroundView,
@@ -38,7 +39,7 @@ import {
 
 // import { Searchbar } from "react-native-elements";
 import { Divider, SearchBar } from "@rneui/themed";
-import { buttonBgColor } from "@/constants/Colors";
+import { buttonBgColor, buttonGray150Color } from "@/constants/Colors";
 import { Squealt3Regular } from "@/constants/FontUtils";
 import { Button } from "@rneui/base";
 import { UserHeaderView } from "@/components/Custom/UserHeaderView";
@@ -56,6 +57,14 @@ import {
 } from "@/constants/HttpUtils";
 import { AxiosResponse } from "axios";
 import { ListEmptyView } from "./ListEmptyView";
+import {
+  formatImageUrl,
+  formatMoney,
+  formatOrderStatus,
+  windowHeight,
+  windowWidth,
+} from "@/constants/CommonUtils";
+import { CLOG } from "@/constants/LogUtils";
 
 // 订单类型
 export type OrdersListTypeProps =
@@ -100,10 +109,10 @@ export const OrdersListView = (type: OrdersListTypeProps) => {
   const status = getOrderStatus(type);
 
   const [refreshing, setRefreshing] = React.useState(false);
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(1);
 
   const onRefresh = React.useCallback(() => {
-    setPageIndex(0);
+    setPageIndex(1);
     getOrderList(true);
   }, []);
 
@@ -125,20 +134,28 @@ export const OrdersListView = (type: OrdersListTypeProps) => {
       return;
     }
 
-    const { list } = data;
-    if (list == null) {
-      DialogUtils.showSuccess(`No orders`);
+    const { list, goods, details } = data;
+    if (list === null || list === undefined) {
+      // DialogUtils.showSuccess(`No orders`);
       return;
     }
 
     // 订单接口成功
-    // console.log(JSON.stringify(data));
+    // CLOG.info(JSON.stringify(data));
+
+    // 解析商品信息
+    const orderListWithGoods = list.map((item: OrderItemType) => {
+      let tempItem = { ...item };
+      const goodsItem: GoodsItemType[] = goods[`${item.id}`];
+      tempItem.goods = goodsItem;
+      return tempItem;
+    });
 
     if (isClean) {
-      const items = [...list];
+      const items = [...orderListWithGoods];
       setOrderItems(items);
     } else {
-      const items = [...orderItems, ...list];
+      const items = [...orderItems, ...orderListWithGoods];
       setOrderItems(items);
     }
   };
@@ -165,20 +182,37 @@ export const OrdersListView = (type: OrdersListTypeProps) => {
     // 当滚动到底部时触发加载更多
     if (!refreshing) {
       setPageIndex((index) => index + 1);
-      getOrderList(false);
     }
   };
 
+  const keyExtractor = useCallback(
+    (item: any, i: number) => `${i}-${item.id}`,
+    []
+  );
+
+  // 分页加载
   useEffect(() => {
-    // getGoodsList(false);
+    getOrderList(pageIndex <= 1);
+  }, [pageIndex]);
+
+  useEffect(() => {
+    // getOrderList(true);
   }, []);
+
+  // 页面可见时
+  useFocusEffect(
+    useCallback(() => {
+      getOrderList(pageIndex <= 1);
+    }, [])
+  );
 
   return (
     <FlashList
-      ListEmptyComponent={ListEmptyView}
+      ListEmptyComponent={MyOrderEmptyView}
       data={orderItems}
+      // data={mockOrderList}
       renderItem={OrderItemView}
-      // keyExtractor={(item) => `${item.id}`}
+      keyExtractor={keyExtractor}
       ListFooterComponent={renderFooter}
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.1} // 触发加载更多的阈值
@@ -198,44 +232,329 @@ export const OrdersListView = (type: OrdersListTypeProps) => {
 
 // 订单item
 const OrderItemView = ({ item }: { item: OrderItemType }) => {
+  const { goods } = item;
+  let goodInfo: GoodsItemType | null = null;
+  // 获取订单追踪第一条记录
+  if (goods !== null && goods !== undefined) {
+    if (goods.length > 0) {
+      const [lastValue] = goods.slice(-1);
+      goodInfo = lastValue;
+    }
+  }
+
   return (
     <Pressable
+      style={{
+        marginVertical: 5,
+        marginHorizontal: 20,
+        height: 160,
+        // backgroundColor: "green",
+      }}
       onPress={() => {
+        // CLOG.info({ order_id: item.id });
         router.push({
           pathname: "/order/[order_id]",
           params: { order_id: item.id },
         });
       }}
     >
-      <HorizonBackgroundView
-        // style={styles.card}
-        style={{ ...styles.orderCard }}
-        // start={{ x: 0, y: 0 }}
-        // end={{ x: 1, y: 0 }}
-        // colors={["#4c329f", "#3b1398", "#19236a"]}
+      <ImageBackground
+        style={{ width: "100%", height: "100%" }}
+        source={require("@/assets/images/order/order_background.png")}
+        contentFit="contain"
       >
-        {/* <View style={styles.card}> */}
-        <View style={styles.leftContainer}>
-          <Image
-            source={require("@/assets/images/shop/goods_icon.png")}
-            style={styles.cardIconImage}
-          />
-        </View>
-        <View style={styles.rightContainer}>
-          <Text style={{ color: "white" }}>{`OrderNum: ${item.orderNum}`}</Text>
-          <Text style={{ color: "gray" }}>1.8% NICO</Text>
-          <Text style={{ color: "gray" }}>30 PUFF</Text>
-        </View>
+        <View
+          style={{
+            flex: 1,
+            borderRadius: 25,
+            justifyContent: "flex-start",
+            alignItems: "center",
+            flexDirection: "row",
+            // backgroundColor: "green",
+          }}
+        >
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              height: "100%",
+              width: windowWidth * 0.35,
+              flexDirection: "row",
+              alignContent: "center",
+              alignItems: "center",
+              justifyContent: "center",
+              // backgroundColor: "red",
+            }}
+          >
+            <Image
+              source={formatImageUrl(goodInfo?.pic)}
+              placeholder={require("@/assets/images/shop/shop_default_icon.png")}
+              style={{ width: 90, height: 90 }}
+              contentFit="contain"
+              placeholderContentFit="contain"
+            />
+            {/* <Image
+              source={require("@/assets/images/shop/shop_default_icon.png")}
+              style={{ width: 90, height: 90 }}
+              contentFit="contain"
+            /> */}
+          </View>
+          {/* <View style={{ position: "absolute", right: 20, top: 60 }}>
+            <Image
+              source={require("@/assets/images/mine/right_arrow.png")}
+              style={{ width: 7, height: 7 / 0.66 }}
+              contentFit="contain"
+            />
+          </View> */}
+          <View
+            style={{ position: "absolute", left: "40%", top: 20, right: 25 }}
+          >
+            <Text
+              style={{
+                fontFamily: Squealt3Regular,
+                fontSize: 16,
+                color: "white",
+                marginBottom: 5,
+              }}
+              ellipsizeMode="tail"
+              numberOfLines={1}
+            >
+              {formatOrderStatus(item.status)}
+            </Text>
 
-        <View style={styles.rightBottom}>
-          <Text style={{ color: "gray", marginLeft: 20 }}>
-            {`${item.orderMoney}`} Worth
-          </Text>
+            {goods &&
+              goods.map((e, index) => {
+                if (index > 2) {
+                  return null;
+                }
+                return (
+                  <View
+                    key={`${index}`}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "flex-start",
+                      // width: "40%",
+                      // backgroundColor: "red",
+                      // marginRight: 10,
+                      marginTop: 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Squealt3Regular,
+                        fontSize: 13,
+                        color: "rgb(84,84,84)",
+                        // flex: 1,
+                        textAlign: "left",
+                        // maxWidth: "30%",
+                      }}
+                      ellipsizeMode={"tail"}
+                      numberOfLines={1}
+                    >
+                      {e?.name}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: Squealt3Regular,
+                        fontSize: 13,
+                        color: "rgb(84,84,84)",
+                        // marginLeft: 5,
+                        // flex: 1,
+                      }}
+                    >{`* ${e.payNumber}`}</Text>
+                  </View>
+                );
+              })}
+          </View>
+
+          <View
+            style={{
+              position: "absolute",
+              left: "40%",
+              bottom: 20,
+              right: 25,
+              flexDirection: "row",
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: Squealt3Regular,
+                fontSize: 13,
+                color: "rgb(84,84,84)",
+                marginRight: 10,
+              }}
+            >
+              Subtotal
+            </Text>
+            <Text
+              style={{
+                fontFamily: Squealt3Regular,
+                fontSize: 13,
+                color: "white",
+              }}
+            >
+              {formatMoney(`$${item.orderMoney}`)} PFF
+            </Text>
+          </View>
+          {/* </BackgroundView> */}
         </View>
-      </HorizonBackgroundView>
+      </ImageBackground>
+      {/* </HorizonBackgroundView> */}
     </Pressable>
   );
 };
+
+// 空Node占位
+const MyOrderEmptyView = () => {
+  return (
+    <View
+      style={{
+        width: "100%",
+        height: windowHeight * 0.7,
+        flex: 1,
+        // backgroundColor: "green",
+        justifyContent: "flex-start",
+      }}
+    >
+      <View
+        style={{
+          margin: 20,
+          // backgroundColor: "green",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Image
+          style={{ width: windowWidth * 0.6, height: windowWidth * 0.6 }}
+          source={require("@/assets/images/order/order_empty.png")}
+          contentFit="contain"
+        ></Image>
+      </View>
+      <View style={{ justifyContent: "center", flexDirection: "row" }}>
+        <Text
+          style={{
+            fontFamily: Squealt3Regular,
+            fontSize: 14,
+            color: buttonGray150Color,
+            // marginLeft: 20,
+            // marginTop: 35,
+            fontWeight: "bold",
+            // marginTop: 5,
+          }}
+        >
+          There is nothing!
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+// const mockOrderList: OrderItemType[] = [
+//   {
+//     id: 1,
+//     orderNum: 0,
+//     userId: 0,
+//     userAddressId: 0,
+//     payMoney: "300000000",
+//     orderMoney: "300000000",
+//     status: 0,
+//     hash: "Shipping",
+//     from: "string",
+//     to: "string",
+//     deliveryNo: "string",
+//     remark: "string",
+//     payTime: 0,
+//     billingAddress: "string",
+//     shippingAddress: "string",
+//     createdAt: "null",
+//     updatedAt: "null",
+//     finishTime: 1,
+//   },
+//   {
+//     id: 2,
+//     orderNum: 0,
+//     userId: 0,
+//     userAddressId: 0,
+//     payMoney: "300000000",
+//     orderMoney: "300000000",
+//     status: 0,
+//     hash: "Order Delivered",
+//     from: "string",
+//     to: "string",
+//     deliveryNo: "string",
+//     remark: "string",
+//     payTime: 0,
+//     billingAddress: "string",
+//     shippingAddress: "string",
+//     createdAt: "null",
+//     updatedAt: "null",
+//     finishTime: 1,
+//   },
+//   {
+//     id: 3,
+//     orderNum: 0,
+//     userId: 0,
+//     userAddressId: 0,
+//     payMoney: "300000000",
+//     orderMoney: "300000000",
+//     status: 0,
+//     hash: "Done",
+//     from: "string",
+//     to: "string",
+//     deliveryNo: "string",
+//     remark: "string",
+//     payTime: 0,
+//     billingAddress: "string",
+//     shippingAddress: "string",
+//     createdAt: "null",
+//     updatedAt: "null",
+//     finishTime: 1,
+//   },
+//   {
+//     id: 4,
+//     orderNum: 0,
+//     userId: 0,
+//     userAddressId: 0,
+//     payMoney: "300000000",
+//     orderMoney: "300000000",
+//     status: 0,
+//     hash: "Shipping",
+//     from: "string",
+//     to: "string",
+//     deliveryNo: "string",
+//     remark: "string",
+//     payTime: 0,
+//     billingAddress: "string",
+//     shippingAddress: "string",
+//     createdAt: "null",
+//     updatedAt: "null",
+//     finishTime: 1,
+//   },
+//   {
+//     id: 5,
+//     orderNum: 0,
+//     userId: 0,
+//     userAddressId: 0,
+//     payMoney: "300000000",
+//     orderMoney: "300000000",
+//     status: 0,
+//     hash: "Shipping",
+//     from: "string",
+//     to: "string",
+//     deliveryNo: "string",
+//     remark: "string",
+//     payTime: 0,
+//     billingAddress: "string",
+//     shippingAddress: "string",
+//     createdAt: "null",
+//     updatedAt: "null",
+//     finishTime: 1,
+//   },
+// ];
 
 const styles = StyleSheet.create({
   container: {
@@ -266,6 +585,8 @@ const styles = StyleSheet.create({
   cardIconImage: {
     width: "100%",
     height: "100%",
+    // width: 80,
+    // height: 100,
     flex: 1,
     margin: 0,
   },
@@ -378,26 +699,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   leftContainer: {
-    flex: 1,
+    // flex: 2,
     alignItems: "flex-start",
     justifyContent: "center",
     // backgroundColor: "red",
-    marginTop: -10,
+    // marginTop: -10,
   },
   rightContainer: {
-    marginTop: -30,
+    // marginTop: -30,
 
     // position: "absolute",
     // left: "40%",
     // alignContent: "flex-start",
     // alignItems: "center",
     // top: 20,
-    // backgroundColor: "green",
-    flex: 2,
+    backgroundColor: "green",
+    // flex: 3,
   },
   rightBottom: {
     position: "absolute",
     right: 15,
-    bottom: 15,
+    bottom: 20,
   },
 });

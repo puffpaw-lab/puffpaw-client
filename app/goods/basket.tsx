@@ -8,8 +8,12 @@ import {
 } from "expo-router";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { RightLogoView } from "@/components/Custom/RightLogoView";
+import {
+  HeaderLeftBackView,
+  RightLogoView,
+} from "@/components/Custom/RightLogoView";
 import { Button } from "@rneui/base";
+import { Squealt3Regular } from "@/constants/FontUtils";
 
 export default function goodsItemScreen() {
   const { goods_id, extra, other } = useLocalSearchParams<{
@@ -35,10 +39,17 @@ export default function goodsItemScreen() {
             headerStyle: { backgroundColor: "black" },
             headerTintColor: "#fff",
             headerTitleStyle: {
-              fontWeight: "bold",
+              fontFamily: Squealt3Regular,
             },
             headerBackTitleVisible: false,
             headerRight: (props) => <RightLogoView></RightLogoView>,
+            headerLeft: (props) => (
+              <HeaderLeftBackView
+                callback={() => {
+                  if (router.canGoBack()) router.back();
+                }}
+              ></HeaderLeftBackView>
+            ),
           }}
         />
         <View style={styles.container}>
@@ -66,7 +77,7 @@ export default function goodsItemScreen() {
                 >
                   1.8% NICO{" "}
                 </Text>
-                <Text style={{ color: "white", marginLeft: 20 }}>30 PUFF</Text>
+                <Text style={{ color: "white", marginLeft: 20 }}>30 PFF</Text>
               </View>
             </View>
             <View style={styles.detailItem}>

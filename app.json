@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.xp010054.puffpaw",
+      "bundleIdentifier": "com.xp010054.pffpaw",
       "infoPlist": {
         "LSApplicationQueriesSchemes": ["lyft"],
         "NSAppTransportSecurity": {
@@ -28,7 +28,8 @@
               "NSExceptionAllowsInsecureHTTPLoads": true
             }
           }
-        }
+        },
+        "UIBackgroundModes": ["fetch"]
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -44,7 +45,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.xp010054.puffpaw",
+      "package": "com.xp010054.pffpaw",
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
@@ -104,6 +105,13 @@
           "android": {
             "usesCleartextTraffic": true
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff"
         }
       ]
     ],

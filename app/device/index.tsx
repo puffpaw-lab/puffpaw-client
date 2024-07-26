@@ -1,7 +1,14 @@
-import { StyleSheet, View, Text, ViewProps, Pressable } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Text,
+  ViewProps,
+  Pressable,
+  Modal,
+} from "react-native";
 
-import React from "react";
-import { Redirect, router, Stack } from "expo-router";
+import React, { useState } from "react";
+import { Redirect, router, Stack, useLocalSearchParams } from "expo-router";
 import { useMMKVBoolean } from "react-native-mmkv";
 import { ConstantStorage } from "@/constants/LocalStorage";
 import {
@@ -10,23 +17,51 @@ import {
 } from "@/components/Custom/BackgroundView";
 
 import { FlashList } from "@shopify/flash-list";
-import { RightLogoView } from "@/components/Custom/RightLogoView";
+import {
+  HeaderLeftBackView,
+  RightLogoView,
+} from "@/components/Custom/RightLogoView";
+import { Squealt3Light, Squealt3Regular } from "@/constants/FontUtils";
+import { buttonBgColor, buttonGrayBgColor } from "@/constants/Colors";
+import { percent10WinHeight, percent5WinHeight } from "@/constants/CommonUtils";
+import { Image, ImageBackground } from "expo-image";
+import { TextInput } from "react-native-gesture-handler";
 
 export default function deviceScreen() {
+  const { show_vape, extra, other } = useLocalSearchParams<{
+    show_vape: string;
+    extra?: string;
+    other?: string;
+  }>();
+
+  const showVape = show_vape === "1";
+
+  const [vapeVisible, setVapeVisible] = useState(false);
+
   return (
     // <BottomSheetModalProvider>
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: "Device List",
+          title: "",
           headerShadowVisible: false,
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            // fontWeight: "bold",
           },
+          headerTitleAlign: "center",
           headerBackTitleVisible: false,
-          headerRight: (props) => <RightLogoView></RightLogoView>,
+          headerRight: (props) => (
+            <RightLogoView marginRight={-5}></RightLogoView>
+          ),
+          headerLeft: (props) => (
+            <HeaderLeftBackView
+              callback={() => {
+                if (router.canGoBack()) router.back();
+              }}
+            ></HeaderLeftBackView>
+          ),
         }}
       />
       <BackgroundView
@@ -36,8 +71,254 @@ export default function deviceScreen() {
         rx={"50%"}
         ry={"50%"}
       >
-        <DeviceList callbackEvent={() => {}}></DeviceList>
+        <FlashList
+          ListHeaderComponent={DeviceHeader}
+          // numColumns={2}
+          data={DATA}
+          renderItem={({ item, index }) => {
+            return (
+              <Pressable
+                onPress={() => {
+                  // router.push({
+                  //   pathname: "/goods/[goods_id]",
+                  //   params: { goods_id: item.title },
+                  // });
+                }}
+              >
+                <View
+                  style={{
+                    paddingHorizontal: 20,
+                    marginTop: 5,
+                  }}
+                >
+                  <HorizonBackgroundView
+                    style={{
+                      height: 50,
+                      alignItems: "center",
+                      flexDirection: "row",
+                      borderRadius: 15,
+                      paddingHorizontal: 15,
+                    }}
+                  >
+                    <Text style={{ flex: 1, color: "white" }}>
+                      {item.title}
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        if (showVape) {
+                          setVapeVisible(true);
+                        } else {
+                          router.push("/device/link");
+                        }
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 90,
+                          height: 30,
+                          // marginRight: 15,
+                          backgroundColor: buttonBgColor,
+                          borderRadius: 15,
+                          alignContent: "center",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: Squealt3Regular,
+                            color: "white",
+                            fontSize: 12,
+                          }}
+                        >
+                          Pair
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </HorizonBackgroundView>
+                </View>
+              </Pressable>
+            );
+          }}
+          estimatedItemSize={150}
+        />
       </BackgroundView>
+
+      {/* 输入Vape code 页面 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={vapeVisible}
+        onRequestClose={() => {
+          setVapeVisible(!vapeVisible);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            // marginTop: 22,
+            backgroundColor: "rgba(0,0,0,0.7)",
+          }}
+        >
+          <View style={{ width: 300, height: 220 / (427.0 / 470) }}>
+            <ImageBackground
+              style={{ width: "100%", height: "100%" }}
+              contentFit="fill"
+              source={require("@/assets/images/nft/dialog/short_bg.png")}
+              // style={styles.centeredView1}
+            >
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+                  fontSize: 18,
+                  color: "rgb(193,193,193)",
+                  textAlign: "center",
+                  marginTop: 35,
+                }}
+              >
+                Vape ID : BSAGSDSADA
+              </Text>
+
+              {/* 输入框 */}
+              <View
+                style={{
+                  paddingHorizontal: 25,
+                  flexDirection: "row",
+                  justifyContent: "center",
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: "black",
+                    width: "100%",
+                    height: 40,
+                    borderRadius: 12,
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    paddingHorizontal: 10,
+                    marginTop: 35,
+                  }}
+                >
+                  <TextInput
+                    style={{
+                      color: "white",
+                      fontSize: 14,
+                      height: "100%",
+                      flex: 1,
+                    }}
+                    placeholder="Click to enter code"
+                    placeholderTextColor={"rgb(85,85,85)"}
+                  ></TextInput>
+                  {/* <Image
+                    style={{ width: 43 * 0.5, height: 24 * 0.5 }}
+                    contentFit="contain"
+                    source={require("@/assets/images/login/create_wallet_eye_close.png")}
+                    // style={styles.centeredView1}
+                  ></Image> */}
+                </View>
+              </View>
+
+              {/* 提示信息 */}
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+                  fontSize: 11,
+                  color: "rgb(68,68,68)",
+                  textAlign: "center",
+                  marginTop: 10,
+                }}
+              >
+                *You must have a rental code from the node
+              </Text>
+              <Text
+                style={{
+                  fontFamily: Squealt3Regular,
+                  fontSize: 11,
+                  color: "rgb(68,68,68)",
+                  textAlign: "center",
+                }}
+              >
+                holder in order to rent their vape
+              </Text>
+
+              {/* 操作按钮 */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginTop: 25,
+                  marginBottom: 30,
+                  paddingHorizontal: 20,
+                  // backgroundColor: "green",
+                }}
+              >
+                <Pressable
+                  onPress={() => {
+                    if (showVape) {
+                      setVapeVisible(false);
+                    }
+                    router.push("device/link");
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: buttonBgColor,
+                    borderRadius: 15,
+                    height: 30,
+                    width: "40%",
+                    // marginRight: 3,
+                    // marginLeft: 30,
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      color: "white",
+                      textAlign: "center",
+                    }}
+                  >
+                    Rent
+                  </Text>
+                </Pressable>
+                <View style={{ width: 15 }}></View>
+                <Pressable
+                  onPress={() => setVapeVisible(false)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: buttonGrayBgColor,
+                    borderRadius: 15,
+                    height: 30,
+                    width: "40%",
+                    // marginRight: 30,
+                    // marginLeft: 3,
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      color: buttonBgColor,
+                      textAlign: "center",
+                    }}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+              </View>
+            </ImageBackground>
+          </View>
+        </View>
+      </Modal>
     </View>
     // </BottomSheetModalProvider>
   );
@@ -45,9 +326,22 @@ export default function deviceScreen() {
 
 const DeviceHeader = () => {
   return (
-    <View style={{ height: 50, marginLeft: 20, marginTop: 30 }}>
-      <Text style={{ fontSize: 24, color: "gray", fontWeight: "500" }}>
-        ECigarettes Devices
+    <View
+      style={{
+        marginLeft: 20,
+        marginTop: percent5WinHeight,
+        marginBottom: 15,
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: Squealt3Regular,
+          fontSize: 20,
+          color: "gray",
+          // fontWeight: "500",
+        }}
+      >
+        Other Vapes:
       </Text>
     </View>
   );
@@ -68,13 +362,58 @@ const DeviceList = (callback: NFTViewProps) => {
         return (
           <Pressable
             onPress={() => {
-              router.push({
-                pathname: "/goods/[goods_id]",
-                params: { goods_id: item.title },
-              });
+              // router.push({
+              //   pathname: "/goods/[goods_id]",
+              //   params: { goods_id: item.title },
+              // });
             }}
           >
-            <FriendView></FriendView>
+            <View
+              style={{
+                paddingHorizontal: 20,
+                marginTop: 5,
+              }}
+            >
+              <HorizonBackgroundView
+                style={{
+                  height: 50,
+                  alignItems: "center",
+                  flexDirection: "row",
+                  borderRadius: 15,
+                  paddingHorizontal: 15,
+                }}
+              >
+                <Text style={{ flex: 1, color: "white" }}>{item.title}</Text>
+                <Pressable
+                  onPress={() => {
+                    router.push("/device/link");
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 90,
+                      height: 30,
+                      // marginRight: 15,
+                      backgroundColor: buttonBgColor,
+                      borderRadius: 15,
+                      alignContent: "center",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: Squealt3Regular,
+                        color: "white",
+                        fontSize: 12,
+                      }}
+                    >
+                      Pair
+                    </Text>
+                  </View>
+                </Pressable>
+              </HorizonBackgroundView>
+            </View>
           </Pressable>
         );
       }}
@@ -98,7 +437,7 @@ const FriendView = () => (
         borderRadius: 15,
       }}
     >
-      <Text style={{ flex: 1, marginLeft: 15, color: "white" }}>
+      <Text style={{ flex: 1, marginLeft: 15, color: "rgb(200,200,200)" }}>
         Device 00001
       </Text>
       <Pressable
@@ -108,17 +447,19 @@ const FriendView = () => (
       >
         <View
           style={{
-            width: 70,
+            width: 100,
             height: 30,
             marginRight: 15,
-            backgroundColor: "red",
-            borderRadius: 10,
+            backgroundColor: buttonBgColor,
+            borderRadius: 15,
             alignContent: "center",
             justifyContent: "center",
             alignItems: "center",
           }}
         >
-          <Text style={{ color: "white" }}>Match</Text>
+          <Text style={{ fontFamily: Squealt3Regular, color: "white" }}>
+            Pair
+          </Text>
         </View>
       </Pressable>
     </HorizonBackgroundView>
@@ -189,30 +530,9 @@ const styles = StyleSheet.create({
 
 const DATA = [
   {
-    title: "First Item",
+    title: "BSAGSDSADA",
   },
   {
-    title: "Second Item",
-  },
-  {
-    title: "Third Item",
-  },
-  {
-    title: "5 Item",
-  },
-  {
-    title: "6 Item",
-  },
-  {
-    title: "7 Item",
-  },
-  {
-    title: "5 Item",
-  },
-  {
-    title: "6 Item",
-  },
-  {
-    title: "7 Item",
+    title: "CBGRTSDFHJ",
   },
 ];

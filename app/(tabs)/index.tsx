@@ -1,26 +1,106 @@
 import {
-  Image,
   ScrollView,
   StyleSheet,
   View,
   Text,
   Pressable,
   StatusBar,
+  ViewProps,
 } from "react-native";
 
-import React from "react";
-import { Redirect, router, Stack } from "expo-router";
-import { useMMKVBoolean, useMMKVObject } from "react-native-mmkv";
-import { ConstantStorage, LocalUserInfo } from "@/constants/LocalStorage";
+import React, { useCallback, useState } from "react";
+import { router, Stack, useFocusEffect } from "expo-router";
+import { useMMKVObject } from "react-native-mmkv";
+import { ConstantStorage } from "@/constants/LocalStorage";
 
 import { BackgroundView } from "@/components/Custom/BackgroundView";
 
 import { RightLogoView } from "@/components/Custom/RightLogoView";
-import { HomeChartView } from "@/components/Custom/ChartView";
-import { buttonBgColor } from "@/constants/Colors";
-import { Squealt3Light, Squealt3Regular } from "@/constants/FontUtils";
+import {
+  HomeChartInfo,
+  HomeChartView,
+  mockChartData,
+} from "@/components/Custom/HomeChartView";
+import { buttonBgColor, buttonGrayBgColor } from "@/constants/Colors";
+import { Squealt3Regular } from "@/constants/FontUtils";
+import {
+  formatMoney,
+  halfWinHeight,
+  percent20WinHeight,
+  percent5WinHeight,
+} from "@/constants/CommonUtils";
+
+import { Image } from "expo-image";
+
+import { registBackgroundFetchAsync } from "@/constants/BackgroundTaskUtils";
+import { DialogUtils } from "@/constants/DialogUtils";
 
 export default function homeScreen() {
+  // 本地登录信息
+  const [tempLogin, setTempLogin] = useMMKVObject<boolean>(
+    ConstantStorage.tempLogin
+  );
+
+  // 收入信息
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [collectCount, setCollectCount] = useState(0);
+
+  // 列表数据信息
+  const [chartDatas, setChartDatas] = useState<HomeChartInfo[] | undefined>();
+
+  // TODO: 【首页】获取Total Earnings
+  const getTotalEarningsInfo = async () => {
+    const _timer = setTimeout(() => {
+      setTotalEarnings((e) => e + 2);
+    }, 1000);
+  };
+
+  // TODO: 【首页】获取Unclaimed信息
+  const getUnclaimedInfo = async () => {
+    const _timer = setTimeout(() => {
+      setCollectCount((e) => e + 1);
+    }, 2000);
+  };
+
+  // TODO: 【首页】获取图表信息
+  const getChartInfo = async () => {
+    const _timer = setTimeout(() => {
+      setChartDatas(mockChartData);
+    }, 3000);
+  };
+
+  // 收集事件
+  const onCollectEvent = () => {
+    // TODO: 【首页】触发了 collect 收集事件
+    //
+    setTotalEarnings(totalEarnings + collectCount);
+    setCollectCount(0);
+
+    DialogUtils.showSuccess(`Collected ${collectCount} success`);
+  };
+
+  React.useEffect(() => {
+    // 注册后台事件
+    registBackgroundFetchAsync();
+  }, []);
+
+  // 页面可见时
+  useFocusEffect(
+    useCallback(() => {
+      getTotalEarningsInfo();
+      getUnclaimedInfo();
+      getChartInfo();
+    }, [])
+  );
+
+  // 模拟增加collect
+  // useEffect(() => {
+  //   const _timer = setTimeout(() => {
+  //     setCollectCount((e) => e + 1);
+  //   }, 2000);
+  //   return () => clearTimeout(_timer);
+  // });
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle={"light-content"}></StatusBar>
@@ -32,12 +112,19 @@ export default function homeScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
           headerRight: (props) => (
-            // <Pressable onPress={() => router.push("/address/add")}>
-            <RightLogoView></RightLogoView>
-            // </Pressable>
+            <Pressable
+              onPress={() => {
+                // router.push({
+                //   pathname: "/test/background_fetch",
+                //   // params: { order_id: "1" },
+                // });
+              }}
+            >
+              <RightLogoView></RightLogoView>
+            </Pressable>
           ),
         }}
       />
@@ -49,28 +136,67 @@ export default function homeScreen() {
         rx={"50%"}
         ry={"50%"}
       >
-        <ScrollView style={{ flex: 1 }}>
-          <TopView></TopView>
-          <HomeChartView style={styles.chartContainer}></HomeChartView>
+        <ScrollView style={{ width: "100%", height: "100%" }}>
+          <TopView
+            totalEarnings={totalEarnings}
+            collectCount={collectCount}
+            collectCallback={onCollectEvent}
+          ></TopView>
+          <View style={{ height: 50 }}></View>
+          <HomeChartView
+            style={styles.chartContainer}
+            chartDatas={chartDatas}
+          ></HomeChartView>
+          <View style={{ height: percent20WinHeight }}></View>
         </ScrollView>
       </BackgroundView>
     </View>
   );
 }
 
-const TopView = () => {
+type TopViewProps = ViewProps & {
+  totalEarnings: number;
+  collectCount: number;
+  collectCallback: () => void;
+};
+
+const TopView = ({
+  totalEarnings,
+  collectCount,
+  collectCallback,
+}: TopViewProps) => {
   return (
     <View style={styles.topContainer}>
-      <Text
+      {/* Total return */}
+      <Pressable
+        onPress={() => {
+          router.push("/trend");
+        }}
         style={{
-          fontFamily: Squealt3Regular,
-          fontSize: 15,
-          color: "white",
-          fontWeight: "500",
+          justifyContent: "flex-start",
+          alignContent: "center",
+          alignItems: "center",
+          flexDirection: "row",
+          // marginVertical: 5,
+          marginTop: percent5WinHeight,
         }}
       >
-        Total revenue{" >"}
-      </Text>
+        <Text
+          style={{
+            fontFamily: Squealt3Regular,
+            fontSize: 16,
+            color: "white",
+            // fontWeight: "500",
+          }}
+        >
+          Total Earnings
+        </Text>
+        <Image
+          source={require("@/assets/images/index/total_right_arrow.png")}
+          style={{ width: 18, height: 18, marginLeft: 0, marginTop: 3 }}
+        />
+      </Pressable>
+
       <View
         style={{
           flexDirection: "row",
@@ -90,67 +216,137 @@ const TopView = () => {
         >
           <Image
             source={require("@/assets/images/index/bear_icon.png")}
-            style={{ width: 25, height: 25 }}
+            style={{ width: "100%", height: "100%" }}
           />
         </View>
         <Text
           style={{
             fontFamily: Squealt3Regular,
-            fontSize: 35,
-            fontWeight: "bold",
+            fontSize: 30,
+            // fontWeight: "bold",
             color: "white",
-            marginLeft: 10,
+            marginLeft: 5,
           }}
         >
-          1,250,000
+          {formatMoney(`${totalEarnings}`)}
         </Text>
       </View>
-      <Text
-        style={{
-          fontFamily: Squealt3Regular,
 
-          fontSize: 15,
-          color: "white",
-          marginTop: 20,
-          fontWeight: "500",
-        }}
-      >
-        Unclaimed
-      </Text>
       <View
         style={{
           flexDirection: "row",
-          alignItems: "center",
-          marginTop: 5,
+          justifyContent: "flex-start",
+          alignItems: "flex-start",
         }}
       >
         <View
           style={{
-            width: 25,
-            height: 25,
-            // backgroundColor: "red",
-            // borderRadius: 15,
+            flexDirection: "row",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            alignContent: "center",
+            marginTop: 20,
+            // width: "50%",
+            borderColor: "rgb(40,40,40)",
+            borderWidth: 1,
+            borderRadius: 15,
+            padding: 15,
+            backgroundColor: buttonGrayBgColor,
           }}
         >
-          <Image
-            source={require("@/assets/images/index/bear_icon.png")}
-            style={{ width: 25, height: 25 }}
-          />
+          <View
+            style={
+              {
+                // flexDirection: "row",
+                // justifyContent: "center",
+                // alignItems: "flex-start",
+                // alignContent: "center",
+                // flex: 1,
+                // backgroundColor: "green",
+              }
+            }
+          >
+            <Text
+              style={{
+                fontFamily: Squealt3Regular,
+                fontSize: 12,
+                color: "rgb(58,58,58)",
+                // marginTop: 20,
+                // fontWeight: "500",
+                // backgroundColor: "yellow",
+                flex: 1,
+                textAlign: "center",
+              }}
+            >
+              Unclaimed
+            </Text>
+            <Text
+              style={{
+                fontFamily: Squealt3Regular,
+                fontSize: 20,
+                // fontWeight: "bold",
+                color: "white",
+                // marginLeft: 10,
+                flex: 1,
+                textAlign: "center",
+              }}
+            >
+              {formatMoney(`${collectCount}`)}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "flex-start",
+              alignContent: "center",
+              // marginTop: 7,
+              marginLeft: 15,
+            }}
+          >
+            <Pressable onPress={collectCallback}>
+              <View
+                style={{
+                  // marginTop: 5,
+                  // marginHorizontal: 30,
+                  justifyContent: "center",
+                  alignContent: "center",
+                  alignItems: "center",
+                  flexDirection: "row",
+                  // marginLeft: 10,
+                  // backgroundColor: "red",
+                  // margin: 10,
+                }}
+              >
+                <View
+                  style={{
+                    // marginHorizontal: 20,
+                    backgroundColor: collectCount <= 0 ? "gray" : buttonBgColor,
+                    justifyContent: "center",
+                    alignContent: "center",
+                    alignItems: "center",
+                    height: 46,
+                    width: 46,
+                    borderRadius: 23,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: Squealt3Regular,
+                      color: "white",
+                      fontSize: 12,
+                    }}
+                  >
+                    Collect
+                  </Text>
+                </View>
+                {/* <View style={{ flex: 1 }}></View> */}
+              </View>
+            </Pressable>
+          </View>
         </View>
-        <Text
-          style={{
-            fontFamily: Squealt3Regular,
-            fontSize: 35,
-            fontWeight: "bold",
-            color: "white",
-            marginLeft: 10,
-          }}
-        >
-          10,000
-        </Text>
+        <View style={{ flex: 1 }}></View>
       </View>
-
-      <CollectButtonView></CollectButtonView>
     </View>
   );
 };
@@ -159,18 +355,20 @@ const CollectButtonView = () => {
   return (
     <Pressable
       onPress={() => {
-        router.push("/trend");
+        // router.push("/trend");
       }}
     >
       <View
         style={{
-          marginTop: 5,
+          // marginTop: 5,
           // marginHorizontal: 30,
           justifyContent: "center",
           alignContent: "center",
           alignItems: "center",
           flexDirection: "row",
+          // marginLeft: 10,
           // backgroundColor: "red",
+          // margin: 10,
         }}
       >
         <View
@@ -180,22 +378,22 @@ const CollectButtonView = () => {
             justifyContent: "center",
             alignContent: "center",
             alignItems: "center",
-            height: 25,
-            width: 85,
-            borderRadius: 15,
+            height: 46,
+            width: 46,
+            borderRadius: 23,
           }}
         >
           <Text
             style={{
               fontFamily: Squealt3Regular,
-              color: "black",
-              fontSize: 14,
+              color: "white",
+              fontSize: 12,
             }}
           >
             Collect
           </Text>
         </View>
-        <View style={{ flex: 1 }}></View>
+        {/* <View style={{ flex: 1 }}></View> */}
       </View>
     </Pressable>
   );
@@ -209,15 +407,16 @@ const styles = StyleSheet.create({
     backgroundColor: "black",
   },
   topContainer: {
-    height: 250,
+    // height: 250,
     // backgroundColor: "gray",
-    margin: 10,
-    marginLeft: 30,
+    // margin: 10,
+    // marginLeft: 30,
+    paddingHorizontal: 25,
   },
-  chartContainer: { height: 300, backgroundColor: "gray", margin: 10 },
+  chartContainer: { backgroundColor: "black" },
   image: {
-    width: 200,
-    height: 200,
+    width: "100%",
+    height: halfWinHeight,
   },
   logo: {
     width: 60,

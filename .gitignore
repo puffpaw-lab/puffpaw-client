@@ -1,6 +1,5 @@
 node_modules/
 .expo/
-dist/
 npm-debug.*
 *.jks
 *.p8
@@ -9,6 +8,7 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 web-build/
+
 
 # macOS
 .DS_Store
@@ -21,8 +21,7 @@ expo-env.d.ts
 
 ios/
 android/
+
 yarn.lock
-package-lock.json
+%ProgramData%
 .idea
-components/Custom/PrivyProvider.tsx
-components/Custom/PrivyProvider.web.tsx

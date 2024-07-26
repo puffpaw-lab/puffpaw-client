@@ -1,15 +1,88 @@
 import { StyleSheet, View, Text, ViewProps, Pressable } from "react-native";
 
-import React from "react";
-import { Redirect, router, Stack } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Redirect, router, Stack, useLocalSearchParams } from "expo-router";
 import { useMMKVBoolean } from "react-native-mmkv";
 import { BackgroundView } from "@/components/Custom/BackgroundView";
 
 import { FlashList } from "@shopify/flash-list";
-import { RightLogoView } from "@/components/Custom/RightLogoView";
+import {
+  HeaderLeftBackView,
+  RightLogoView,
+} from "@/components/Custom/RightLogoView";
 import { ConstantStorage } from "@/constants/LocalStorage";
+import { Squealt3Regular } from "@/constants/FontUtils";
+import {
+  formatLocalTime,
+  parseAddress,
+  percent5WinHeight,
+} from "@/constants/CommonUtils";
+import { buttonBgColor } from "@/constants/Colors";
+import { DialogUtils } from "@/constants/DialogUtils";
+import { orderDetailInterface } from "@/constants/HttpUtils";
+import {
+  OrderItemType,
+  OrderDetailItemType,
+  GoodsItemType,
+  AddressDetailType,
+  OrderTrackingItemType,
+} from "@/constants/ViewProps";
+import { AxiosResponse } from "axios";
 
 export default function deviceScreen() {
+  // 参数
+  const { order_id, extra, other } = useLocalSearchParams<{
+    order_id: string;
+    extra?: string;
+    other?: string;
+  }>();
+
+  const [orderItem, setOrderItem] = useState<OrderItemType | null>(null);
+
+  const [trackingItems, setTrackingItems] = useState<
+    OrderTrackingItemType[] | null
+  >(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 订单信息成功
+  const orderInfoSuccess = (response: AxiosResponse<any, any> | null) => {
+    const topData = response?.data;
+    if (topData == null) {
+      return;
+    }
+
+    const { code, msg, data } = topData;
+    if (code != 0) {
+      DialogUtils.showError(`${msg}`);
+      return;
+    }
+
+    const { depinOrder, log } = data;
+    if (log !== null) {
+      setTrackingItems(log);
+    }
+
+    setOrderItem(depinOrder);
+  };
+
+  // 获取商品数据
+  const getOrderDetailInfo = async () => {
+    setRefreshing(true);
+
+    try {
+      const response = await orderDetailInterface(parseInt(order_id ?? "0"));
+      orderInfoSuccess(response);
+    } catch (e) {
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // 拉取接口
+  useEffect(() => {
+    getOrderDetailInfo();
+  }, []);
+
   return (
     // <BottomSheetModalProvider>
     <View style={styles.container}>
@@ -20,10 +93,21 @@ export default function deviceScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
+
           headerBackTitleVisible: false,
-          headerRight: (props) => <RightLogoView></RightLogoView>,
+          headerRight: (props) => (
+            <RightLogoView marginRight={-5}></RightLogoView>
+          ),
+          headerLeft: (props) => (
+            <HeaderLeftBackView
+              callback={() => {
+                if (router.canGoBack()) router.back();
+              }}
+            ></HeaderLeftBackView>
+          ),
         }}
       />
       <BackgroundView
@@ -33,20 +117,64 @@ export default function deviceScreen() {
         rx={"50%"}
         ry={"50%"}
       >
-        <TrackingList callbackEvent={() => {}}></TrackingList>
+        <FlashList
+          ListHeaderComponent={() => (
+            <TrackingHeaderView orderItem={orderItem}></TrackingHeaderView>
+          )}
+          ListFooterComponent={TrackingFooterView}
+          // numColumns={2}
+          data={trackingItems}
+          renderItem={({ item, index }) => {
+            // if (typeof item === "string") {
+            //   // Rendering header
+            //   return (
+            //     <Text
+            //       style={{
+            //         fontFamily: Squealt3Regular,
+            //         fontSize: 16,
+            //         color: "rgb(172,172,172)",
+            //         marginLeft: 30,
+            //         // height: 30,
+            //         marginVertical: 20,
+            //         // textAlign: "center",
+            //         // backgroundColor: "black",
+            //       }}
+            //     >
+            //       {item}
+            //     </Text>
+            //   );
+            // }
+
+            return (
+              <Pressable
+                onPress={() => {
+                  // router.push({
+                  //   pathname: "/goods/[goods_id]",
+                  //   params: { goods_id: item.title },
+                  // });
+                }}
+              >
+                <TrackingItemView trackingItem={item}></TrackingItemView>
+              </Pressable>
+            );
+          }}
+          getItemType={(item) => {
+            // To achieve better performance, specify the type based on the item
+            return typeof item === "string" ? "sectionHeader" : "row";
+          }}
+          estimatedItemSize={150}
+        />
       </BackgroundView>
     </View>
     // </BottomSheetModalProvider>
   );
 }
 
-type GreetFunction = () => void;
-
-type NFTViewProps = ViewProps & {
-  callbackEvent: GreetFunction;
+type OrderItemProps = ViewProps & {
+  orderItem: OrderItemType | null;
 };
 
-const TrackingHeaderView = () => (
+const TrackingHeaderView = ({ orderItem }: OrderItemProps) => (
   <View
     style={{
       paddingHorizontal: 20,
@@ -56,25 +184,49 @@ const TrackingHeaderView = () => (
   >
     <View
       style={{
-        marginTop: 50,
-        height: 60,
+        marginTop: percent5WinHeight,
+        // height: 60,
         // backgroundColor: "red",
       }}
     >
-      <Text style={{ color: "white", fontSize: 16 }}>Shipped with USPS</Text>
-      <Text style={{ color: "white", fontSize: 16, marginTop: 10 }}>
-        Tracking ID: 11238172938912371283764
+      <Text
+        style={{ fontFamily: Squealt3Regular, color: "white", fontSize: 14 }}
+        ellipsizeMode="tail"
+        numberOfLines={2}
+      >
+        Shipped with {orderItem?.deliveryCompany}
+      </Text>
+      <Text
+        style={{
+          fontFamily: Squealt3Regular,
+          color: "white",
+          fontSize: 14,
+          marginTop: 10,
+        }}
+        ellipsizeMode="tail"
+        numberOfLines={2}
+      >
+        Tracking ID: {orderItem?.deliveryNo}
       </Text>
     </View>
-    <View
+    {/* <View
       style={{
-        marginTop: 50,
+        marginTop: percent5WinHeight,
         height: 30,
         // backgroundColor: "red",
       }}
     >
-      <Text style={{ color: "gray", fontSize: 14 }}>Monday,April 24</Text>
-    </View>
+      <Text
+        style={{
+          fontFamily: Squealt3Regular,
+          color: "gray",
+          fontSize: 14,
+          marginLeft: 10,
+        }}
+      >
+        Monday, April 24
+      </Text>
+    </View> */}
   </View>
 );
 
@@ -94,48 +246,34 @@ const TrackingFooterView = () => (
         // backgroundColor: "red",
       }}
     >
-      <Text style={{ color: "gray", fontSize: 16, marginTop: 10 }}>
+      <Text
+        style={{
+          fontFamily: Squealt3Regular,
+          color: "rgb(206,206,206)",
+          fontSize: 12,
+          marginTop: 10,
+        }}
+      >
         Times are shown in the local timezone
       </Text>
     </View>
   </View>
 );
-const TrackingList = (callback: NFTViewProps) => {
-  return (
-    <FlashList
-      ListHeaderComponent={TrackingHeaderView}
-      ListFooterComponent={TrackingFooterView}
-      // numColumns={2}
-      data={DATA}
-      renderItem={({ item, index }) => {
-        return (
-          <Pressable
-            onPress={() => {
-              router.push({
-                pathname: "/goods/[goods_id]",
-                params: { goods_id: item.title },
-              });
-            }}
-          >
-            <TrackingItemView></TrackingItemView>
-          </Pressable>
-        );
-      }}
-      estimatedItemSize={150}
-    />
-  );
+
+type TrackItemProps = ViewProps & {
+  trackingItem: OrderTrackingItemType;
 };
 
-const TrackingItemView = () => (
+const TrackingItemView = ({ trackingItem }: TrackItemProps) => (
   <View
     style={{
-      paddingHorizontal: 20,
+      paddingHorizontal: 30,
       marginTop: 10,
     }}
   >
     <View
       style={{
-        height: 50,
+        minHeight: 50,
         alignItems: "center",
         flexDirection: "row",
         // borderRadius: 15,
@@ -149,35 +287,128 @@ const TrackingItemView = () => (
           justifyContent: "center",
         }}
       >
-        <Text style={{ width: 80, height: 20, color: "gray", marginTop: 5 }}>
-          12:45 pm
+        <Text
+          style={{
+            fontFamily: Squealt3Regular,
+            fontSize: 12,
+            width: 75,
+            // height: 20,
+            color: "rgb(172,172,172)",
+            marginTop: 5,
+          }}
+        >
+          {formatLocalTime(trackingItem?.createTime)}
         </Text>
         <View style={{ flex: 1 }}></View>
       </View>
-      <View style={{ width: 2, height: "80%", backgroundColor: "red" }}></View>
+      <View
+        style={{ width: 1, height: "80%", backgroundColor: "rgb(236,90,65)" }}
+      ></View>
       <View
         style={{
           alignContent: "flex-start",
           alignItems: "center",
           justifyContent: "center",
+          marginHorizontal: 20,
         }}
       >
-        <Text
+        <View
           style={{
-            flex: 1,
-            height: 20,
-            color: "gray",
-            marginHorizontal: 20,
-            marginTop: 5,
+            flexDirection: "row",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            alignContent: "center",
           }}
         >
-          Package arrived at an Amazon facility Swanton, Ohio US
-        </Text>
-        {/* <View style={{ flex: 1 }}></View> */}
+          <Text
+            style={{
+              fontFamily: Squealt3Regular,
+              fontSize: 12,
+              // flex: 1,
+              // height: 20,
+              color: "rgb(172,172,172)",
+              marginTop: 5,
+              textAlign: "left",
+            }}
+          >
+            {trackingItem.detail}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}></View>
+        {/* <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            alignContent: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: Squealt3Regular,
+              fontSize: 12,
+              flex: 1,
+              // height: 20,
+              color: "rgb(172,172,172)",
+              marginTop: 5,
+              textAlign: "left",
+            }}
+          >
+            {trackingItem.detail}
+          </Text>
+        </View> */}
       </View>
     </View>
   </View>
 );
+
+interface HistoryItem {
+  name: string | null;
+  address: string | null;
+  date: string | null;
+}
+
+const contacts: (string | HistoryItem)[] = [
+  "Monday, April 24",
+  {
+    name: "Package arrived at an Amazon facility.",
+    address: "Swanton, Ohio US",
+    date: "12:59 PM",
+  },
+  {
+    name: "Package arrived at an Amazon facility.",
+    address: "Haslet, TX US",
+    date: "9:34 AM",
+  },
+  {
+    name: "Package arrived at an Amazon facility.",
+    address: "Wyadotte, MI US",
+    date: "7:52 AM",
+  },
+  {
+    name: "Package arrived at an Amazon facility.",
+    address: "Haslet, TX US",
+    date: "6:13 AM",
+  },
+  {
+    name: "Carrier picked up the package.",
+    address: "",
+    date: "",
+  },
+  // {
+  //   name: "Package arrived at an Amazon facility Swanton, Ohio US",
+  //   date: "May 1 10:26",
+  // },
+  // {
+  //   name: "Package arrived at an Amazon facility Swanton, Ohio US",
+  //   date: "May 1 10:26",
+  // },
+  // "Monday, April 24",
+  // {
+  //   name: "Package arrived at an Amazon facility Swanton, Ohio US",
+  //   date: "April 30 10:26",
+  // },
+];
 
 const styles = StyleSheet.create({
   container: {

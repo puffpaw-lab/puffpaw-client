@@ -19,6 +19,7 @@ import CountryPicker, {
   Country,
   CountryCode,
 } from "react-native-country-picker-modal";
+import { CLOG } from "@/constants/LogUtils";
 
 export function EmailLoginView({ callbackEvent }: PrivyLoginProps) {
   const [code, setCode] = useState("");
@@ -26,13 +27,13 @@ export function EmailLoginView({ callbackEvent }: PrivyLoginProps) {
 
   const { state, sendCode, loginWithCode } = useLoginWithEmail({
     onSendCodeSuccess(args) {
-      console.log("onSendCodeSuccess" + args.email);
+      CLOG.info("onSendCodeSuccess" + args.email);
       DialogUtils.showSuccess("Send code success " + args.email);
     },
     onLoginSuccess(user, isNewUser) {
       // show a toast, send analytics event, etc...
-      console.log("onLoginSuccess " + JSON.stringify(user));
-      console.log("onLoginSuccess2 " + isNewUser);
+      CLOG.info("onLoginSuccess " + JSON.stringify(user));
+      CLOG.info("onLoginSuccess2 " + isNewUser);
       DialogUtils.showSuccess("Login success");
 
       setTimeout(() => {
@@ -42,7 +43,7 @@ export function EmailLoginView({ callbackEvent }: PrivyLoginProps) {
       }, 2000);
     },
     onError(error) {
-      console.log("onError" + error.message);
+      CLOG.info("onError" + error.message);
       DialogUtils.showError("Login Failed " + error.message);
     },
   });
@@ -168,13 +169,13 @@ export function SmsLoginView({ callbackEvent }: PrivyLoginProps) {
 
   const { state, sendCode, loginWithCode } = useLoginWithSMS({
     onSendCodeSuccess(args) {
-      console.log("onSendCodeSuccess " + args.phone);
+      CLOG.info("onSendCodeSuccess " + args.phone);
       DialogUtils.showSuccess("Send code success " + args.phone);
     },
     onLoginSuccess(user, isNewUser) {
       // show a toast, send analytics event, etc...
-      console.log("onLoginSuccess " + JSON.stringify(user));
-      console.log("onLoginSuccess2 " + isNewUser);
+      CLOG.info("onLoginSuccess " + JSON.stringify(user));
+      CLOG.info("onLoginSuccess2 " + isNewUser);
       DialogUtils.showSuccess("Login success " + user.id);
 
       setTimeout(() => {
@@ -185,7 +186,7 @@ export function SmsLoginView({ callbackEvent }: PrivyLoginProps) {
     },
 
     onError(error) {
-      console.log("onError " + error);
+      CLOG.info("onError " + error);
       DialogUtils.showError("Login Failed " + error.message);
     },
   });
@@ -260,7 +261,7 @@ export function SmsLoginView({ callbackEvent }: PrivyLoginProps) {
               }
 
               const phoneNumber = `${callingCode}${phone}`;
-              console.log(phoneNumber);
+              CLOG.info(phoneNumber);
               sendCode({ phone: phoneNumber });
             }}
           >

@@ -23,7 +23,10 @@ import { ConstantStorage } from "@/constants/LocalStorage";
 import { ImageBackground } from "expo-image";
 
 import { BackgroundView } from "@/components/Custom/BackgroundView";
-import { RightLogoView } from "@/components/Custom/RightLogoView";
+import {
+  HeaderLeftBackView,
+  RightLogoView,
+} from "@/components/Custom/RightLogoView";
 import { Button } from "@rneui/base";
 import {
   usePrivy,
@@ -31,6 +34,8 @@ import {
   getUserEmbeddedWallet,
 } from "@privy-io/expo";
 import { DialogUtils } from "@/constants/DialogUtils";
+import { Squealt3Regular } from "@/constants/FontUtils";
+import { CLOG } from "@/constants/LogUtils";
 
 export default function changePasswordScreen() {
   // const [isLogin, setIsLogin] = useMMKVBoolean(ConstantStorage.isLogin);
@@ -41,11 +46,11 @@ export default function changePasswordScreen() {
 
   const wallet = useEmbeddedWallet({
     onCreateWalletError(error) {
-      console.log("create wallet error " + error.message);
+      CLOG.info("create wallet error " + error.message);
       DialogUtils.showError("create wallet error " + error.message);
     },
     onCreateWalletSuccess(wallet) {
-      console.log("onCreateWalletSuccess " + wallet.toJSON);
+      CLOG.info("onCreateWalletSuccess " + wallet.toJSON);
       DialogUtils.showSuccess("create wallet success ");
 
       setTimeout(() => {
@@ -53,11 +58,11 @@ export default function changePasswordScreen() {
       }, 1000);
     },
     // onRecoverWalletError(error) {
-    //   console.log("onRecoverWalletError " + error);
+    //   CLOG.info("onRecoverWalletError " + error);
     //   DialogUtils.showError("Login Error " + error.message);
     // },
     // onRecoverWalletSuccess(wallet) {
-    //   console.log("onRecoverWalletSuccess ");
+    //   CLOG.info("onRecoverWalletSuccess ");
     //   DialogUtils.showSuccess("Login Error " + error.message);
     // },
   });
@@ -76,10 +81,19 @@ export default function changePasswordScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
+
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
+          headerLeft: (props) => (
+            <HeaderLeftBackView
+              callback={() => {
+                if (router.canGoBack()) router.back();
+              }}
+            ></HeaderLeftBackView>
+          ),
         }}
       />
 

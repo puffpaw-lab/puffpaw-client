@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import React, { PropsWithChildren, useState } from "react";
 import { View, Pressable, StyleSheet, Text, ViewProps } from "react-native";
 import { Image } from "expo-image";
@@ -11,6 +11,7 @@ import { buttonBgColor } from "@/constants/Colors";
 import { LoginFunction } from "@/constants/ViewProps";
 import { useMMKVObject } from "react-native-mmkv";
 import { ConstantStorage, LocalCartInfo } from "@/constants/LocalStorage";
+import { CLOG } from "@/constants/LogUtils";
 
 export type FloatCartProps = ViewProps &
   PropsWithChildren<{
@@ -45,19 +46,34 @@ export const FloatCartView = ({
 
   // 购物车
   const cartEvent = () => {
+    CLOG.info("点击购物车");
     router.push({
       pathname: "/goods/cart",
     });
   };
 
   return (
-    <Pressable onPress={cartEvent}>
+    // <Pressable onPress={cartEvent}>
+    <Link
+      href={"/goods/cart"}
+      style={{
+        width: 50,
+        height: 50,
+        right: right,
+        bottom: bottom,
+        // backgroundColor: buttonBgColor,
+        borderRadius: 25,
+        justifyContent: "center",
+        alignItems: "center",
+        position: "absolute",
+      }}
+    >
       <View
         style={{
           width: 50,
           height: 50,
-          right: right,
-          bottom: bottom,
+          // right: right,
+          // bottom: bottom,
           backgroundColor: buttonBgColor,
           borderRadius: 25,
           justifyContent: "center",
@@ -69,7 +85,7 @@ export const FloatCartView = ({
           source={require("@/assets/images/common/cart.png")}
           style={{ width: 30, height: 30, marginRight: 3 }}
         />
-        {localCartList && localCartList.length > 0 && (
+        {/* {localCartList && localCartList.length > 0 && (
           <Text
             style={{
               width: 20,
@@ -86,9 +102,10 @@ export const FloatCartView = ({
           >
             {getItemNumber()}
           </Text>
-        )}
+        )} */}
       </View>
-    </Pressable>
+      {/* </Pressable> */}
+    </Link>
   );
 };
 

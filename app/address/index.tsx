@@ -8,14 +8,18 @@ import {
 } from "react-native";
 
 import React from "react";
-import { Redirect, router, Stack } from "expo-router";
+import { Redirect, router, Stack, useLocalSearchParams } from "expo-router";
 import { useMMKVBoolean } from "react-native-mmkv";
 import { ConstantStorage } from "@/constants/LocalStorage";
 
 import { FlashList } from "@shopify/flash-list";
 import { BackgroundView } from "@/components/Custom/BackgroundView";
-import { RightLogoView } from "@/components/Custom/RightLogoView";
+import {
+  HeaderLeftBackView,
+  RightLogoView,
+} from "@/components/Custom/RightLogoView";
 import { Button } from "@rneui/base";
+import { Squealt3Regular } from "@/constants/FontUtils";
 
 const DATA = [
   {
@@ -46,10 +50,10 @@ const AddressList = () => {
         return (
           <Pressable
             onPress={() => {
-              router.push({
-                pathname: "/address/add",
-                params: { address_id: item.title },
-              });
+              // router.push({
+              //   pathname: "/address/add",
+              //   params: { address_id: item.title },
+              // });
             }}
           >
             <View style={styles.card}>
@@ -92,10 +96,18 @@ export default function addressScreen() {
           headerStyle: { backgroundColor: "black" },
           headerTintColor: "#fff",
           headerTitleStyle: {
-            fontWeight: "bold",
+            fontFamily: Squealt3Regular,
           },
+          headerTitleAlign: "center",
           headerBackTitleVisible: false,
           headerRight: (props) => <RightLogoView></RightLogoView>,
+          headerLeft: (props) => (
+            <HeaderLeftBackView
+              callback={() => {
+                if (router.canGoBack()) router.back();
+              }}
+            ></HeaderLeftBackView>
+          ),
         }}
       />
 
@@ -106,10 +118,10 @@ export default function addressScreen() {
           // mode="contained"
           // buttonColor="red"
           onPress={() => {
-            router.push({
-              pathname: "/address/add",
-              // params: { goods_id: goods_id },
-            });
+            // router.push({
+            //   pathname: "/address/add",
+            //   // params: { goods_id: goods_id },
+            // });
           }}
           style={styles.addAddressButton}
         >

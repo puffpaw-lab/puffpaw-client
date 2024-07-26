@@ -39,6 +39,7 @@ import {
   loginWithTwitter,
 } from "@/constants/HttpUtils";
 import { AxiosResponse } from "axios";
+import { CLOG } from "@/constants/LogUtils";
 
 export default function loginScreen() {
   // 1, 在privy ready之后才开始处理逻辑,
@@ -55,24 +56,24 @@ export default function loginScreen() {
 
   const [checkStatus, setCheckStatus] = useState(false);
   const [checkLoginStatus, setCheckLoginStatus] = useState(true);
-  const { user, isReady, getAccessToken } = usePrivy();
+  const { user, isReady } = usePrivy();
 
   // 钱包注册信息
   const wallet = useEmbeddedWallet({
     onCreateWalletSuccess(wallet) {
-      console.log("onCreateWalletSuccess " + wallet.toJSON);
+      CLOG.info("onCreateWalletSuccess " + wallet.toJSON);
       DialogUtils.showSuccess("Create wallet success");
     },
     onRecoverWalletSuccess(wallet) {
-      console.log("onRecoverWalletSuccess " + wallet.toJSON);
+      CLOG.info("onRecoverWalletSuccess " + wallet.toJSON);
       DialogUtils.showSuccess("Recover wallet success");
     },
     onCreateWalletError(error) {
-      console.log("onCreateWalletError " + error.message);
+      CLOG.info("onCreateWalletError " + error.message);
       DialogUtils.showError("Create wallet error");
     },
     onRecoverWalletError(error) {
-      console.log("onRecoverWalletError " + error.message);
+      CLOG.info("onRecoverWalletError " + error.message);
       DialogUtils.showError("Recover wallet error");
     },
   });
@@ -104,6 +105,7 @@ export default function loginScreen() {
     let params: LoginParams = {
       privId: uid,
       address: address,
+      platForm: "",
     };
 
     const phoneInfo = user.linked_accounts.map((item) => item.type == "phone");
@@ -160,18 +162,18 @@ export default function loginScreen() {
   };
 
   const jumpToHome = () => {
-    console.log("跳转到首页");
+    CLOG.info("跳转到首页");
 
     // router.push("/(tabs)/index");
   };
 
   useEffect(() => {
-    console.log(`isReady=${isReady}`);
-    console.log(`localUser=${localUser}`);
+    CLOG.info(`isReady=${isReady}`);
+    CLOG.info(`localUser=${localUser}`);
 
     // 钱包已经连接上,两秒之后跳转到首页
     if (isConnected(wallet) && localUser != null) {
-      console.log("钱包已经连接上");
+      CLOG.info("钱包已经连接上");
     }
   }, [isReady, wallet, user, localUser]);
 
